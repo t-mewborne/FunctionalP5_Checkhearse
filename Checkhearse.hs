@@ -1,2 +1,1 @@
-
 type Board = [[Int]]
