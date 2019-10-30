@@ -1,1 +1,1 @@
-type Board = [Integer]
+type Board = [[Int]]
