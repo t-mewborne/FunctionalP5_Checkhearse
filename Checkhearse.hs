@@ -1,4 +1,9 @@
-module checkhears where
+module Checkhearse where
+import Data.List (nub, sort)
+import Data.List.Split (chunksOf)
+import Data.Tuple (swap)
+import Data.Ratio (numerator, denominator)
+import Data.Ratio ((%))
 
 data Player = Black | Red
 data Piece = Reg Player | King Player | Empty
@@ -10,8 +15,8 @@ type Board = [[Piece]]
 --type Board = [Square]
 type Game = (Board,Player)
 
-type Board = [Square]
-type Move ((Char,Int),(Char,Int)) --((Start),(End),Turn)
+-- type Board = [Square] (2nd Declare)
+type Move = ((Char,Int),(Char,Int)) --((Start),(End),Turn)
 
 showBoard :: Game ->  [String] --One string per row
 showBoard = undefined
