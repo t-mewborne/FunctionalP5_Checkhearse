@@ -20,23 +20,25 @@ type Move = ((Char,Int),(Char,Int)) --((Start),(End),Turn)
 
 buildGame :: Game --Initial State of the board
 buildGame = 
-    let bd = buildRow 1 2 Black ++
-             buildRow 2 1 Black ++
-             buildRow 3 2 Black ++
+    let bd = buildRow 1 2 (Reg Black) ++
+             buildRow 2 1 (Reg Black) ++
+             buildRow 3 2 (Reg Black) ++
              buildRow 4 1 Empty ++
              buildRow 5 2 Empty ++
-             buildRow 6 1 Red ++
-             buildRow 7 2 Red ++
-             buildRow 8 1 Red
-        buildRow :: Int -> Int -> Player -> Board --build one row
-        buildRow row column plyr
+             buildRow 6 1 (Reg Red) ++
+             buildRow 7 2 (Reg Red) ++
+             buildRow 8 1 (Reg Red)
+        buildRow :: Int -> Int -> Piece -> Board --build one row
+        buildRow row column piece
             | column >= 9 = []
-            | otherwise = ((row,column),Reg plyr):(buildRow row (column + 2) plyr)
+            | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
     in (bd, Black)
-
+{-
 showBoard :: Game ->  [String] --One string per row
-showBoard game = undefined
-
+showBoard (board,player):game = 
+    case board of
+        ((x,y),piece) = 
+-}
 updateBoard :: Game -> Move -> Maybe Board --is the move valid? Should we make this a return a Maybe Game?
 updateBoard = undefined
 
