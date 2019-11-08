@@ -57,7 +57,7 @@ showBoard game =
         showRows board row
             | row >= 9 = []
             | otherwise  = (showRow board 1 row 1)++(showRows board (row + 1))
-    in show (top : showRows (fst game) 1 : [seperator])
+    in show (top ++ (showRows (fst game) 1) ++ seperator) --i think the probloem is here
 
 showRow :: Board -> Int -> Int -> Int -> String
 showRow board smallerRoe c g = "ye\n"
