@@ -6,6 +6,7 @@ import Data.String
 import Data.Tuple (swap)
 import Data.Ratio (numerator, denominator)
 import Data.Ratio ((%))
+import Data.Char
 
 data Player = Black | Red deriving Show
 data Piece = Reg Player | King Player | Empty deriving Show
@@ -39,27 +40,28 @@ buildGame =
 validSpaces :: [Loc]
 validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
 
-noPlaySpace = "~~~|"
-emptySpace =  "   |"
-regRedSpace = " r |"
-kingRedSpace =" R |"
-regBlkSpace = " b |"
-kingBlkSpace =" B |"
-seperator =   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-columnLabels ="      1   2   3   4   5   6   7   8\n"
 
-
-printBoard :: Game -> String --One string per row assume the board is sorted
-printBoard game = 
-    let top = columnLabels ++ seperator
-        printRows::Board -> Int -> String
-        printRows board row
+--this should be showBoard, call putStrLn in GHCI to test
+showBoard :: Game -> String --One string per row assume the board is sorted
+showBoard game = 
+    let noPlaySpace = "~~~|"
+        emptySpace =  "   |"
+        regRedSpace = " r |"
+        kingRedSpace =" R |"
+        regBlkSpace = " b |"
+        kingBlkSpace =" B |"
+        seperator =   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        columnLabels ="      1   2   3   4   5   6   7   8\n"
+        top = columnLabels ++ seperator
+        showRows::Board -> Int -> String
+        showRows board row
             | row >= 9 = []
-            | otherwise  = (printRow board 1 row 1)++(printRows board (row + 1))
-    in show (top : printRows (fst game) 1 : [seperator])
+            | otherwise  = (showRow board 1 row 1)++(showRows board (row + 1))
+    in show (top : showRows (fst game) 1 : [seperator])
 
-printRow :: Board -> Int -> Int -> Int -> String
-printRow board smallerRoe c g = "ye"
+showRow :: Board -> Int -> Int -> Int -> String
+showRow board smallerRoe c g = "ye\n"
+
 {-
 printRow :: Board -> Int -> Int -> Int -> String
 printRow board smallerRow row column =
@@ -69,6 +71,7 @@ printRow board smallerRow row column =
          then emptySpace ++
          else 
 -}
+
 {-
      1   2   3
    ~~~~~~~~~~~~~
@@ -90,7 +93,7 @@ validMove = undefined
 
 
 --Doesn't work for strings like "1,"
-readLoc :: String -> Maybe Loc --this should return a maybe loc in the future
+readLoc :: String -> Maybe Loc --this should return a maybe loc in the future 3,7
 readLoc str = 
     let remSpace :: [Char] -> String
         remSpace [] = []
@@ -99,7 +102,13 @@ readLoc str =
             then remSpace xs
             else x : remSpace xs
     in  case (splitOn "," (remSpace str)) of
-         (x:y:[]) -> Just ((read x :: Int),(read y :: Int))
+         --(x:[]) -> Nothing
+         (x:y:[]) ->
+            if (length x == 1 && length y == 1)
+            then if (isDigit (head x) && isDigit (head y))
+                 then Just ((read x :: Int),(read y :: Int))
+                 else Nothing
+            else Nothing
          --(x:[]) -> Nothing does not fix "1," string issue
          lst -> Nothing
 
