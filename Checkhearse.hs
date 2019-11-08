@@ -42,7 +42,7 @@ showBoard (board,player):game =
 
 
 
-updateBoard :: Game -> Move -> Maybe Game --is the move valid? Should we make this a return a Maybe Game?
+updateBoard :: Game -> Move -> Maybe Game
 updateBoard = undefined
   -- first check validMove
   -- determine if move is jump or scoot & do validJump or validScoot
@@ -75,15 +75,18 @@ validMove (bd, plyr) ((x1, y1), (x2, y2))
   where start = pAtLoc (x1,y1) bd
         end = pAtLoc (x2,y2) bd
 
---rightDir :: Maybe Piece -> Maybe Piece -> Player -> Bool
---rightDir (Just ((x1, y1), King color)) (Just ((x2, y2), Empty)) plyr = True
---rightDir (Just ((x1, y1), Reg color)) (Just ((x2, y2), Empty)) plyr = undefined
+rightDir :: Maybe Square -> Maybe Square -> Player -> Bool
+rightDir (Just ((x1, y1), King color)) (Just ((x2, y2), Empty)) plyr = True
+rightDir (Just ((x1, y1), Reg color)) (Just ((x2, y2), Empty)) plyr
+  | (color == Black && (y2-y1>0))= True
+  | (color == Red && (y2-y1<0))  = True
+  | otherwise                    = False
 
 --valPlyr :: Maybe Piece -> Player -> Bool  
 valPlyr (Just (Reg color)) turn = color == turn
 valPlyr (Just (King color)) turn = color == turn
 
-pAtLoc :: Loc -> Board -> Maybe Piece
+pAtLoc :: Loc -> Board -> Piece
 pAtLoc loc bd = lookup loc bd
 
 
