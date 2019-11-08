@@ -5,8 +5,8 @@ import Data.Tuple (swap)
 import Data.Ratio (numerator, denominator)
 import Data.Ratio ((%))
 
-data Player = Black | Red deriving Show
-data Piece = Reg Player | King Player | Empty deriving Show
+data Player = Black | Red deriving (Eq,Show)
+data Piece = Reg Player | King Player | Empty deriving (Eq,Show)
 
 
 type Loc = (Int,Int) --(row,column)
@@ -16,7 +16,7 @@ type Board = [Square] --choose between these two types for board (only contains 
 type Game = (Board,Player) --player = current turn
 
 -- type Board = [Square] (2nd Declare)
-type Move = ((Char,Int),(Char,Int)) --((Start),(End),Turn)
+data Move = Jump (Loc,Loc) | Scoot (Loc,Loc) --((Start),(End),Turn)
 
 buildGame :: Game --Initial State of the board
 buildGame = 
@@ -39,11 +39,53 @@ showBoard (board,player):game =
     case board of
         ((x,y),piece) = 
 -}
-updateBoard :: Game -> Move -> Maybe Board --is the move valid? Should we make this a return a Maybe Game?
-updateBoard = undefined
 
+
+
+updateBoard :: Game -> Move -> Maybe Game --is the move valid? Should we make this a return a Maybe Game?
+updateBoard = undefined
+  -- first check validMove
+  -- determine if move is jump or scoot & do validJump or validScoot
+  -- if |y2 - y1| = 1, then scoot
+  -- if |y2 - y1| > 1, then jump
+
+--movalidMove :: Game -> Move -> Maybe Bool
+--movalidMove (bd, plyr) ((x1, y1), (x2, y2)) =
+--    do srt <- lookup (x1,y1) bd
+--       end <- lookup (x2,y2) bd
+
+validJump :: Game -> Move -> Bool
+validJump (bd, plyr) (Jump ((x1, y1), (x2, y2))) = undefined
+--  determine if theres a piece/ are pieces bt start & end
+-- tells if that piece / pieces are the other player's
+
+validScoot :: Game -> Move -> Bool
+validScoot (bd, plyr) (Scoot ((x1, y1), (x2, y2))) = undefined
+--
+
+-- validMove checks if start & end are on the board & if start is player's color
 validMove :: Game -> Move -> Bool
-validMove = undefined
+validMove (bd, plyr) ((x1, y1), (x2, y2))
+     | (start == Nothing)              = False
+     | (end == Nothing)                = False
+     | (end /= Just Empty)             = False
+     | (not (valPlyr start plyr))      = False
+     | (not (rightDir start end plyr)) = False
+     | otherwise                       = True
+  where start = pAtLoc (x1,y1) bd
+        end = pAtLoc (x2,y2) bd
+
+--rightDir :: Maybe Piece -> Maybe Piece -> Player -> Bool
+--rightDir (Just ((x1, y1), King color)) (Just ((x2, y2), Empty)) plyr = True
+--rightDir (Just ((x1, y1), Reg color)) (Just ((x2, y2), Empty)) plyr = undefined
+
+--valPlyr :: Maybe Piece -> Player -> Bool  
+valPlyr (Just (Reg color)) turn = color == turn
+valPlyr (Just (King color)) turn = color == turn
+
+pAtLoc :: Loc -> Board -> Maybe Piece
+pAtLoc loc bd = lookup loc bd
+
 
 readLoc :: String -> Loc --this should return a maybe loc in the future
 readLoc = undefined
