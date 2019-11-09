@@ -199,6 +199,19 @@ valPlyr (Just (King color)) turn = (color == turn)
 pAtLoc :: Loc -> Board -> Maybe Piece
 pAtLoc loc bd = lookup loc bd
 
+winner :: Board -> Maybe Player
+winner board
+    | nobodyWins = Nothing
+    | redWins = Just Red
+    | blackWins = Just Black
+    | otherwise = Nothing
+    where nobodyWins = all (\square -> (snd square) == Empty) board
+          redWins = all (\square -> (snd square) == (Reg Red)  ||
+                                  (snd square) == (King Red) ||
+                                  (snd square) == (Empty)) board
+          blackWins = all (\square -> (snd square) == (Reg Black)  ||
+                                    (snd square) == (King Black) ||
+                                    (snd square) == (Empty)) board
 
 readLoc :: String -> Maybe Loc
 readLoc str = 
