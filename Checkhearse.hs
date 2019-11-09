@@ -1,10 +1,13 @@
 module Checkhearse where
 import Data.List (nub, sort)
 import Data.List.Split (chunksOf)
+import Data.List.Split
+import Data.String
 import Data.Tuple (swap)
 import Data.Ratio (numerator, denominator)
 import Data.Ratio ((%))
 import Data.Maybe
+import Data.Char
 
 data Player = Black | Red deriving (Eq,Show)
 data Piece = Reg Player | King Player | Empty deriving (Eq,Show)
@@ -34,11 +37,77 @@ buildGame =
             | column >= 9 = []
             | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
     in (bd, Black)
+
+
+validSpaces :: [Loc]
+validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
+
+--call putStrLn in GHCI to test (putStrLn $ showBoard buildGame)
+showBoard :: Game -> String --One string per row assume the board is sorted
+showBoard game = 
+    let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        columnLabels ="\n       1     2     3     4     5     6     7     8\n"
+        top = columnLabels ++ seperator
+        showRows::Board -> Int -> String
+        showRows board row
+            | row >= 9 = []
+            | otherwise  = (showRow board row) ++ seperator ++ (showRows board (row + 1))
+        showTurn = 
+            case snd game of
+            Black -> "\n\x1b[30m  Player 1's turn (Black Pieces)\x1b[0m\n"
+            Red -> "\n\x1b[31m  Player 2's turn (Red Pieces)\x1b[0m\n" 
+    in top ++ (showRows (fst game) 1) ++ showTurn
+
+showRow :: Board -> Int -> String
+showRow board row = 
+    let noPlaySpace = "~~~~~|"
+        emptySpace =  "     |"
+        rowNumSpace = " " ++ show row ++ " |"
+        aux :: Int -> Int -> String
+        aux 4 column = []
+        aux smallRow 9 = '\n' : (aux (smallRow + 1) 0)
+        aux smallRow column =
+            (if ((row,column) `elem` validSpaces)
+            then if (smallRow == 2) 
+                 then showSpace board (row,column)
+                 else emptySpace
+            else case (smallRow,column) of
+                    (2,0) -> " " ++ rowNumSpace
+                    (_,0) -> "    |"
+                    _ -> noPlaySpace)
+            ++ aux smallRow (column + 1)
+    in aux 1 0
+
+showSpace :: Board -> Loc -> String
+showSpace (space:spaces) loc =
+    let clrRed = "\x1b[31m" --change text color to red
+        clrBlk = "\x1b[30m" --change text color to black
+        clrRst = "\x1b[0m"  --reset  text color to default
+        showPiece =
+            case snd space of
+                Reg Red    -> clrRed ++ "  r  " ++ clrRst ++ "|"
+                Reg Black  -> clrBlk ++ "  b  " ++ clrRst ++ "|"
+                King Red   -> clrRed ++ "  R  " ++ clrRst ++ "|"
+                King Black -> clrBlk ++ "  B  " ++ clrRst ++ "|"
+                Empty -> "     |"
+    in  if ((fst space) == loc)
+        then showPiece
+        else if ((length spaces) <= 0) 
+             then error "Space " ++ show loc ++ " not found"
+             else showSpace spaces loc
+
+
 {-
-showBoard :: Game ->  [String] --One string per row
-showBoard (board,player):game = 
-    case board of
-        ((x,y),piece) = 
+     1   2   3
+   ~~~~~~~~~~~~~
+   |~~~|   |~~~|
+ 1 |~~~| R |~~~|
+   |~~~|   |~~~|
+   ~~~~~~~~~~~~~
+   |   |~~~|   |
+ 2 |   |~~~| r |
+   |   |~~~|   |
+   ~~~~~~~~~~~~~
 -}
 
 
@@ -89,34 +158,6 @@ doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
   in (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
 
 
-{--  let xv = if (x2-x1>0) 
---           then x1+1
-           else x1-1
-      yv = if (y2-y1>0)
-           then y1+1
-           else y1-1
-      maybeVictim = pAtLoc (xv, yv)
-      if maybeVictim == Nothing
-      then ret = Game ---ERROR, TRYNA JUMP OFF BOARD
-      else victim = fromJust maybeVictim
-
-      if victim == Empty 
-      then ret = Game --- ERROR, CAN'T JUMP EMPTY SPACE
-      else if victim == King plyr || Reg plyr
-      then ret = Game --- ERROR, CAN'T JUMP OWN PLAYER
-      else Just activePiece = pAtLoc(x1, y2) bd
-           bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
-           bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
-           nextTurn = if plyr == Red
-                      then Black
-                      else Red
-           ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
-  in ret
--}
-
-
--- find out what piece is at (x1, y1) so we can pass it to remove & insert
-
 makeScoot :: Game -> Move -> Game
 makeScoot (bd, plyr) ((x1, y1), (x2, y2)) =
   let Just activePiece = pAtLoc (x1, y2) bd
@@ -159,5 +200,20 @@ pAtLoc :: Loc -> Board -> Maybe Piece
 pAtLoc loc bd = lookup loc bd
 
 
-readLoc :: String -> Loc --this should return a maybe loc in the future
-readLoc = undefined
+readLoc :: String -> Maybe Loc
+readLoc str = 
+    let remSpace :: [Char] -> String
+        remSpace [] = []
+        remSpace (x:xs) = 
+            if x == ' '
+            then remSpace xs
+            else x : remSpace xs
+    in  case (splitOn "," (remSpace str)) of
+         (x:y:[]) ->
+            if (length x == 1 && length y == 1)
+            then if (isDigit (head x) && isDigit (head y))
+                 then Just ((read x :: Int),(read y :: Int))
+                 else Nothing
+            else Nothing
+         lst -> Nothing
+
