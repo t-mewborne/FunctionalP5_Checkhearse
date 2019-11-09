@@ -53,8 +53,8 @@ showBoard game =
             | otherwise  = (showRow board row) ++ seperator ++ (showRows board (row + 1))
         showTurn = 
             case snd game of
-            Black -> "\n\x1b[30m Player 1's turn (Black Pieces)\x1b[0m\n"
-            Red -> "\n\x1b[31m Player 2's turn (Red Pieces)\x1b[0m\n"
+            Black -> "\n\x1b[30m  Player 1's turn (Black Pieces)\x1b[0m\n"
+            Red -> "\n\x1b[31m  Player 2's turn (Red Pieces)\x1b[0m\n" 
     in top ++ (showRows (fst game) 1) ++ showTurn
 
 showRow :: Board -> Int -> String
@@ -62,7 +62,6 @@ showRow board row =
     let noPlaySpace = "~~~~~|"
         emptySpace =  "     |"
         rowNumSpace = " " ++ show row ++ " |"
-        --next = aux smallRow (column + 1)
         aux :: Int -> Int -> String
         aux 4 column = []
         aux smallRow 9 = '\n' : (aux (smallRow + 1) 0)
@@ -80,10 +79,10 @@ showRow board row =
 
 showSpace :: Board -> Loc -> String
 showSpace (space:spaces) loc =
-    let clrRed = "\x1b[31m"
-        clrBlk = "\x1b[30m"
-        clrRst = "\x1b[0m"
-        showPiece = 
+    let clrRed = "\x1b[31m" --change text color to red
+        clrBlk = "\x1b[30m" --change text color to black
+        clrRst = "\x1b[0m"  --reset  text color to default
+        showPiece =
             case snd space of
                 Reg Red    -> clrRed ++ "  r  " ++ clrRst ++ "|"
                 Reg Black  -> clrBlk ++ "  b  " ++ clrRst ++ "|"
