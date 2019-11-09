@@ -37,40 +37,65 @@ buildGame =
             | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
     in (bd, Black)
 
+
 validSpaces :: [Loc]
 validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
 
-
---this should be showBoard, call putStrLn in GHCI to test
+--call putStrLn in GHCI to test (putStrLn $ showBoard buildGame)
 showBoard :: Game -> String --One string per row assume the board is sorted
 showBoard game = 
-    let noPlaySpace = "~~~|"
-        emptySpace =  "   |"
-        regRedSpace = " r |"
-        kingRedSpace =" R |"
-        regBlkSpace = " b |"
-        kingBlkSpace =" B |"
-        seperator =   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-        columnLabels ="      1   2   3   4   5   6   7   8\n"
+    let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        columnLabels ="\n       1     2     3     4     5     6     7     8\n"
         top = columnLabels ++ seperator
         showRows::Board -> Int -> String
         showRows board row
             | row >= 9 = []
-            | otherwise  = (showRow board 1 row 1)++(showRows board (row + 1))
-    in show (top ++ (showRows (fst game) 1) ++ seperator) --i think the probloem is here
+            | otherwise  = (showRow board row) ++ seperator ++ (showRows board (row + 1))
+        showTurn = 
+            case snd game of
+            Black -> "\n\x1b[30m Player 1's turn (Black Pieces)\x1b[0m\n"
+            Red -> "\n\x1b[31m Player 2's turn (Red Pieces)\x1b[0m\n"
+    in top ++ (showRows (fst game) 1) ++ showTurn
 
-showRow :: Board -> Int -> Int -> Int -> String
-showRow board smallerRoe c g = "ye\n"
+showRow :: Board -> Int -> String
+showRow board row = 
+    let noPlaySpace = "~~~~~|"
+        emptySpace =  "     |"
+        rowNumSpace = " " ++ show row ++ " |"
+        --next = aux smallRow (column + 1)
+        aux :: Int -> Int -> String
+        aux 4 column = []
+        aux smallRow 9 = '\n' : (aux (smallRow + 1) 0)
+        aux smallRow column =
+            (if ((row,column) `elem` validSpaces)
+            then if (smallRow == 2) 
+                 then showSpace board (row,column)
+                 else emptySpace
+            else case (smallRow,column) of
+                    (2,0) -> " " ++ rowNumSpace
+                    (_,0) -> "    |"
+                    _ -> noPlaySpace)
+            ++ aux smallRow (column + 1)
+    in aux 1 0
 
-{-
-printRow :: Board -> Int -> Int -> Int -> String
-printRow board smallerRow row column =
-    if (not ((row,column) `elem` validSpaces))
-    then noPlaySpace ++ 
-    else if (smallerRow != 2) 
-         then emptySpace ++
-         else 
--}
+showSpace :: Board -> Loc -> String
+showSpace (space:spaces) loc =
+    let clrRed = "\x1b[31m"
+        clrBlk = "\x1b[30m"
+        clrRst = "\x1b[0m"
+        showPiece = 
+            case snd space of
+                Reg Red    -> clrRed ++ "  r  " ++ clrRst ++ "|"
+                Reg Black  -> clrBlk ++ "  b  " ++ clrRst ++ "|"
+                King Red   -> clrRed ++ "  R  " ++ clrRst ++ "|"
+                King Black -> clrBlk ++ "  B  " ++ clrRst ++ "|"
+                Empty -> "     |"
+    in  if ((fst space) == loc)
+        then showPiece
+        else if ((length spaces) <= 0) 
+             then error "Space " ++ show loc ++ " not found"
+             else showSpace spaces loc
+
 
 {-
      1   2   3
@@ -91,9 +116,7 @@ updateBoard = undefined
 validMove :: Game -> Move -> Bool
 validMove = undefined
 
-
---Doesn't work for strings like "1,"
-readLoc :: String -> Maybe Loc --this should return a maybe loc in the future 3,7
+readLoc :: String -> Maybe Loc
 readLoc str = 
     let remSpace :: [Char] -> String
         remSpace [] = []
@@ -102,13 +125,11 @@ readLoc str =
             then remSpace xs
             else x : remSpace xs
     in  case (splitOn "," (remSpace str)) of
-         --(x:[]) -> Nothing
          (x:y:[]) ->
             if (length x == 1 && length y == 1)
             then if (isDigit (head x) && isDigit (head y))
                  then Just ((read x :: Int),(read y :: Int))
                  else Nothing
             else Nothing
-         --(x:[]) -> Nothing does not fix "1," string issue
          lst -> Nothing
 
