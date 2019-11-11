@@ -127,9 +127,9 @@ updateBoard game ((x1, y1), (x2, y2)) =
 
 makeJump :: Game -> Move -> Game
 makeJump (bd, plyr) ((y1, x1), (y2, x2)) 
-  -- | maybeVictim == Nothing                    = (bd, plyr) --error tryna jump off board
-  -- | victim == Empty                           = (bd, plyr) -- error can't jump empty space
-  -- | victim == King plyr || victim == Reg plyr = (bd, plyr) -- error can't jump self
+  | maybeVictim == Nothing                    = (bd, plyr) --error tryna jump off board
+  | victim == Empty                           = (bd, plyr) -- error can't jump empty space
+  | victim == King plyr || victim == Reg plyr = (bd, plyr) -- error can't jump self
   | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim
   where xv = if (x2-x1>0) -- to the right
              then x1+1
