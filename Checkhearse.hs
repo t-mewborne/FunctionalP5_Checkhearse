@@ -140,14 +140,46 @@ makeJump (bd, plyr) ((y1, x1), (y2, x2))
         maybeVictim = pAtLoc (xv, yv) bd
         victim = fromJust maybeVictim
 
---        Just activePiece = pAtLoc(x1, y2) bd
---        bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
---        bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
---        nextTurn = if plyr == Red
---                   then Black
---                   else Red
---        ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+{- need function to do multiple jumps
+ do we make it so that the user types each space they want to hit?
+ or do they just type end placement & computer chooses which one?
+ or does computer prompt user if theres another jump available?
+-}
 
+
+--This function will be called by doJump, if there's another jump available,
+--it will call doJump & if there's not another jump, it'll return the game from doJump
+{-checkMoreJumps :: Player -> Loc -> Board -> Game
+  checkMoreJumps plyr loc board =
+  let lftLoc = (,)
+     rgtLoc = (,)
+     rgtPiece = fndPiece rgtLoc board
+     lftPiece = fndPiece lftLoc board
+     (lftJumpResult, p) = makeJump (board, plyr) (loc, lftLoc)
+     (rgtJumpResult, p) = makeJump (board, plyr) (loc, rgtLoc)
+  in if (lftJumpResult /= board)
+    then (lftJumpResult, --will figure out player part)
+     else if (rgtJumpResult /= board)
+     then (rgtJumpResult, --will figure out player part)
+     else (board, --player)
+-}
+      
+{-fndPiece loc board = 
+  let maybePiece = pAtLoc loc board
+  in if maybePiece == Nothing
+     then Nothing
+     else fromJust (maybePiece)
+-}
+{-      Just activePiece = pAtLoc(x1, y2) bd
+        bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
+        bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
+        nextTurn = if plyr == Red
+                   then Black
+                   else Red
+        ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+-}
+
+--doJump Loc -> Loc -> Loc -> Board -> Player -> Piece -> Game
 doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
   let Just activePiece = pAtLoc(x1, y2) bd
       bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
