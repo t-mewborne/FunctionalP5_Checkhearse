@@ -188,6 +188,8 @@ doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
                  then Black
                  else Red
   in (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+--  in checkMoreJumps plyr (x2,y2) (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+-- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
 
 makeScoot :: Game -> Move -> Game
