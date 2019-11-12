@@ -126,28 +126,60 @@ updateBoard game ((x1, y1), (x2, y2)) =
   -- if |y2 - y1| > 1, then jump
 
 makeJump :: Game -> Move -> Game
-makeJump (bd, plyr) ((x1, y1), (x2, y2)) 
-  | maybeVictim == Nothing                    = (bd, plyr) -- error tryna jump off board
+makeJump (bd, plyr) ((y1, x1), (y2, x2)) 
+  | maybeVictim == Nothing                    = (bd, plyr) --error tryna jump off board
   | victim == Empty                           = (bd, plyr) -- error can't jump empty space
   | victim == King plyr || victim == Reg plyr = (bd, plyr) -- error can't jump self
-  | otherwise                                 = doJump (x1, y1) (x2, y2) (xv, yv) bd plyr victim
-  where xv = if (x2-x1>0) 
+  | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim
+  where xv = if (x2-x1>0) -- to the right
              then x1+1
-             else x1-1
-        yv = if (y2-y1>0)
+             else x1-1 -- to the left
+        yv = if (y2-y1>0) -- to the bottom
              then y1+1
-             else y1-1
+             else y1-1 -- to the top
         maybeVictim = pAtLoc (xv, yv) bd
         victim = fromJust maybeVictim
 
---        Just activePiece = pAtLoc(x1, y2) bd
---        bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
---        bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
---        nextTurn = if plyr == Red
---                   then Black
---                   else Red
---        ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+{- need function to do multiple jumps
+ do we make it so that the user types each space they want to hit?
+ or do they just type end placement & computer chooses which one?
+ or does computer prompt user if theres another jump available?
+-}
 
+
+--This function will be called by doJump, if there's another jump available,
+--it will call doJump & if there's not another jump, it'll return the game from doJump
+{-checkMoreJumps :: Player -> Loc -> Board -> Game
+  checkMoreJumps plyr loc board =
+  let lftLoc = (,)
+     rgtLoc = (,)
+     rgtPiece = fndPiece rgtLoc board
+     lftPiece = fndPiece lftLoc board
+     (lftJumpResult, p) = makeJump (board, plyr) (loc, lftLoc)
+     (rgtJumpResult, p) = makeJump (board, plyr) (loc, rgtLoc)
+  in if (lftJumpResult /= board)
+    then (lftJumpResult, --will figure out player part)
+     else if (rgtJumpResult /= board)
+     then (rgtJumpResult, --will figure out player part)
+     else (board, --player)
+-}
+      
+{-fndPiece loc board = 
+  let maybePiece = pAtLoc loc board
+  in if maybePiece == Nothing
+     then Nothing
+     else fromJust (maybePiece)
+-}
+{-      Just activePiece = pAtLoc(x1, y2) bd
+        bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
+        bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
+        nextTurn = if plyr == Red
+                   then Black
+                   else Red
+        ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+-}
+
+--doJump Loc -> Loc -> Loc -> Board -> Player -> Piece -> Game
 doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
   let Just activePiece = pAtLoc(x1, y2) bd
       bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
@@ -156,23 +188,26 @@ doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
                  then Black
                  else Red
   in (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+--  in checkMoreJumps plyr (x2,y2) (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+-- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
 
 makeScoot :: Game -> Move -> Game
 makeScoot (bd, plyr) ((x1, y1), (x2, y2)) =
-  let Just activePiece = pAtLoc (x1, y2) bd
+  let Just activePiece = pAtLoc (x1, y1) bd
       bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
       nextTurn = if plyr == Red
                  then Black
                  else Red
-  in (setPiece bdWoutStart ((x2, y2), Empty) activePiece, nextTurn)
+  in (setPiece bdWoutStart ((x2, y2),Empty) activePiece, nextTurn)
 
 setPiece :: Board -> Square -> Piece -> Board
-setPiece bd (loc,oldPiece) replacement = aux bd replacement
-  where aux (fstPieces:(loc,oldPiece):lstPieces) replacement = fstPieces:(loc, replacement):lstPieces
+setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
+
 --removeAndInsert [fstPieces]:(loc,_):[lstPieces] loc replacement = 
 
 -- validMove checks if start & end are on the board & if start is player's color
+-- Tested and VERY CORRECT
 validMove :: Game -> Move -> Bool
 validMove (bd, plyr) ((x1, y1), (x2, y2))
      | (start == Nothing)                              = False -- start spot is playable spot on board
@@ -184,9 +219,10 @@ validMove (bd, plyr) ((x1, y1), (x2, y2))
   where start = pAtLoc (x1,y1) bd
         end = pAtLoc (x2,y2) bd
 
+-- Tested and Works
 rightDir :: Loc -> Maybe Piece -> Loc ->  Maybe Piece -> Player -> Bool
-rightDir (x1,y1) (Just (King color)) (x2,y2) (Just Empty) plyr = True
-rightDir (x1,y1) (Just (Reg color)) (x2,y2) (Just Empty) plyr
+rightDir (y1,x1) (Just (King color)) (y2,x2) (Just Empty) plyr = True
+rightDir (y1,x1) (Just (Reg color)) (y2,x2) (Just Empty) plyr
   | (color == Black && (y2-y1>0))= True
   | (color == Red && (y2-y1<0))  = True
   | otherwise                    = False
