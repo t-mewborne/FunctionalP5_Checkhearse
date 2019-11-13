@@ -32,7 +32,7 @@ buildGame =
              buildRow 6 1 (Reg Red) ++
              buildRow 7 2 (Reg Red) ++
              buildRow 8 1 (Reg Red)
-        buildRow :: Int -> Int -> Piece -> Board --build one row
+        buildRow :: Int -> Int -> Piece -> Board --build one single row
         buildRow row column piece
             | column >= 9 = []
             | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
@@ -43,7 +43,7 @@ validSpaces :: [Loc]
 validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
 
 --call putStrLn in GHCI to test (putStrLn $ showBoard buildGame)
-showBoard :: Game -> String --One string per row assume the board is sorted
+showBoard :: Game -> String
 showBoard game = 
     let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
         columnLabels ="\n       1     2     3     4     5     6     7     8\n"
@@ -98,16 +98,16 @@ showSpace (space:spaces) loc =
 
 
 {-
-     1   2   3
-   ~~~~~~~~~~~~~
-   |~~~|   |~~~|
- 1 |~~~| R |~~~|
-   |~~~|   |~~~|
-   ~~~~~~~~~~~~~
-   |   |~~~|   |
- 2 |   |~~~| r |
-   |   |~~~|   |
-   ~~~~~~~~~~~~~
+      1     2     3
+   ~~~~~~~~~~~~~~~~~~~
+   |~~~~~|     |~~~~~|
+ 1 |~~~~~|  R  |~~~~~|
+   |~~~~~|     |~~~~~|
+   ~~~~~~~~~~~~~~~~~~~
+   |     |~~~~~|     |
+ 2 |     |~~~~~|  r  |
+   |     |~~~~~|     |
+   ~~~~~~~~~~~~~~~~~~~
 -}
 
 
