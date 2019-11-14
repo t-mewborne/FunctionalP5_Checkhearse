@@ -4,6 +4,5 @@ Contributors:
 Gabby Orr
 Seth Fogarty
 Travis Mewborne
-Henry Lin
 Aaron Feleke
 Nicolas Bowen
