@@ -2,7 +2,6 @@ This is the fifth project and first group project of Dr. Fogarty's 2322-Principl
 
 Contributors:
 Gabby Orr
-Seth Fogarty
 Travis Mewborne
 Aaron Feleke
 Nicolas Bowen
