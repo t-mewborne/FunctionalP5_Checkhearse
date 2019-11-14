@@ -201,6 +201,7 @@ makeScoot (bd, plyr) ((x1, y1), (x2, y2)) =
                  else Red
   in (setPiece bdWoutStart ((x2, y2),Empty) activePiece, nextTurn)
 
+-- will change into 2 funcs when we get rid of empties
 setPiece :: Board -> Square -> Piece -> Board
 setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
 
@@ -232,6 +233,7 @@ valPlyr :: Maybe Piece -> Player -> Bool
 valPlyr (Just (Reg color)) turn = (color == turn)
 valPlyr (Just (King color)) turn = (color == turn)
 
+-- Fogarty doesn't like this function, will take out & replace calls with lookup
 pAtLoc :: Loc -> Board -> Maybe Piece
 pAtLoc loc bd = lookup loc bd
 
