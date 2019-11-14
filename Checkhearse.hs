@@ -112,9 +112,9 @@ showSpace (space:spaces) loc =
 
 
 
-updateBoard :: Game -> Move -> Game
+updateBoard :: Game -> Move -> Maybe Game
 updateBoard game ((x1, y1), (x2, y2)) =
-  if not (validMove game ((x1, y1), (x2, y2))) then game --- SAME GAME, BC INVALID MOVE
+  if not (validMove game ((x1, y1), (x2, y2))) then Nothing --- SAME GAME, BC INVALID MOVE
   else if abs (y2-y1)==1
     then makeScoot game ((x1, y1), (x2, y2))  
   else makeJump game ((x1, y1), (x2, y2))  
@@ -125,12 +125,12 @@ updateBoard game ((x1, y1), (x2, y2)) =
   -- if |y2 - y1| = 1, then scoot
   -- if |y2 - y1| > 1, then jump
 
-makeJump :: Game -> Move -> Game
+makeJump :: Game -> Move -> Maybe Game
 makeJump (bd, plyr) ((y1, x1), (y2, x2)) 
-  | maybeVictim == Nothing                    = (bd, plyr) --error tryna jump off board
-  | victim == Empty                           = (bd, plyr) -- error can't jump empty space
-  | victim == King plyr || victim == Reg plyr = (bd, plyr) -- error can't jump self
-  | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim
+  | maybeVictim == Nothing                    = Nothing --error tryna jump off board
+  | victim == Empty                           = Nothing --error can't jump empty space
+  | victim == King plyr || victim == Reg plyr = Nothing --error can't jump self
+  | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim -- slap a Just there
   where xv = if (x2-x1>0) -- to the right
              then x1+1
              else x1-1 -- to the left
@@ -192,14 +192,16 @@ doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
 -- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
 
-makeScoot :: Game -> Move -> Game
+makeScoot :: Game -> Move -> Maybe Game
 makeScoot (bd, plyr) ((x1, y1), (x2, y2)) =
   let Just activePiece = pAtLoc (x1, y1) bd
       bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
       nextTurn = if plyr == Red
                  then Black
                  else Red
-  in (setPiece bdWoutStart ((x2, y2),Empty) activePiece, nextTurn)
+  in Just (setPiece bdWoutStart ((x2, y2),Empty) activePiece, nextTurn)
+
+
 
 -- will change into 2 funcs when we get rid of empties
 setPiece :: Board -> Square -> Piece -> Board
