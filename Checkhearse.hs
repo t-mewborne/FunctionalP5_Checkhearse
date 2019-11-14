@@ -125,20 +125,29 @@ updateBoard game ((x1, y1), (x2, y2)) =
   -- if |y2 - y1| = 1, then scoot
   -- if |y2 - y1| > 1, then jump
 
+{-
 makeJump :: Game -> Move -> Maybe Game
 makeJump (bd, plyr) ((y1, x1), (y2, x2)) 
-  | maybeVictim == Nothing                    = Nothing --error tryna jump off board
+  | victim == Nothing                    = Nothing --error tryna jump off board
   | victim == Empty                           = Nothing --error can't jump empty space
   | victim == King plyr || victim == Reg plyr = Nothing --error can't jump self
   | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim -- slap a Just there
-  where xv = if (x2-x1>0) -- to the right
-             then x1+1
-             else x1-1 -- to the left
-        yv = if (y2-y1>0) -- to the bottom
-             then y1+1
-             else y1-1 -- to the top
-        maybeVictim = pAtLoc (xv, yv) bd
-        victim = fromJust maybeVictim
+  where 
+  -}
+
+makeJump :: Game -> Move -> Maybe Game
+makeJump (bd, plyr) ((r1, c1), (r2, c2)) =
+    do let cv = if (c2-c1>0) -- to the right
+             then c1+1
+             else c1-1 -- to the left
+       let rv = if (r2-r1>0) -- to the bottom
+             then r1+1
+             else r1-1 -- to the top
+       victim <- lookup (rv, cv) bd
+       if (victim `elem` [Reg plyr, King plyr, Empty])
+       then Nothing
+       else Just $ doJump (r1, c1) (r2, c2) ((rv,cv),victim) (bd,plyr)
+
 
 {- need function to do multiple jumps
  do we make it so that the user types each space they want to hit?
@@ -179,35 +188,40 @@ makeJump (bd, plyr) ((y1, x1), (y2, x2))
         ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
 -}
 
---doJump Loc -> Loc -> Loc -> Board -> Player -> Piece -> Game
-doJump (x1,y1) (x2, y2) (xv, yv) bd plyr victim =
-  let Just activePiece = pAtLoc(x1, y2) bd
-      bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
-      bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
-      nextTurn = if plyr == Red
-                 then Black
-                 else Red
-  in (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
+--doJump Loc -> Loc -> Loc -> Board -> Player -> Piece -> Maybe Game
+doJump :: Loc -> Loc -> Square -> Game -> Game
+doJump start end victim (bd,plyr) =
+    let activePiece =
+            case lookup start bd of
+                Just piece -> piece
+                _ -> error "(doJump) Invalid start piece"
+        remStart = setPiece bd (start, activePiece) Empty --Probably should remove this when we remove empties
+        remVictim = setPiece remStart victim Empty
+        nextTurn = otherPlayer plyr
+    in  (setPiece remVictim (end, Empty) activePiece, nextTurn)
 --  in checkMoreJumps plyr (x2,y2) (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
 -- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
+otherPlayer :: Player -> Player
+otherPlayer Red = Black
+otherPlayer Black = Red
 
 makeScoot :: Game -> Move -> Maybe Game
-makeScoot (bd, plyr) ((x1, y1), (x2, y2)) =
-  let Just activePiece = pAtLoc (x1, y1) bd
-      bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
-      nextTurn = if plyr == Red
-                 then Black
-                 else Red
-  in Just (setPiece bdWoutStart ((x2, y2),Empty) activePiece, nextTurn)
+makeScoot (bd, plyr) (start, end) =
+  let activePiece = 
+        case lookup start bd of
+            Just piece -> piece
+            _ -> error "(makeScoot) Invalid start piece"
+      remStart = setPiece bd (start, activePiece) Empty
+      nextTurn = otherPlayer plyr
+  in Just (setPiece remStart (end,Empty) activePiece, nextTurn)
 
 
 
 -- will change into 2 funcs when we get rid of empties
+-- create a remove/add functions
 setPiece :: Board -> Square -> Piece -> Board
 setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
-
---removeAndInsert [fstPieces]:(loc,_):[lstPieces] loc replacement = 
 
 -- validMove checks if start & end are on the board & if start is player's color
 -- Tested and VERY CORRECT
@@ -219,8 +233,29 @@ validMove (bd, plyr) ((x1, y1), (x2, y2))
      | (not (valPlyr start plyr))                      = False -- piece at start is player's whose turn it is
      | (not (rightDir (x1,y1) start (x2,y2) end plyr)) = False -- piece is moving right dir based on turn
      | otherwise                                       = True  -- is a valid general move
-  where start = pAtLoc (x1,y1) bd
-        end = pAtLoc (x2,y2) bd
+  where start = lookup (x1,y1) bd
+        end = lookup (x2,y2) bd
+
+{-
+validMove (bd,plyr) (startLoc,endLoc)
+    do  someStuff
+        startPc <- lookup startLoc bd
+        endPc <- lookup endLoc bd
+         
+
+       case (startPc,endPc) of
+            (Nothing,_) = False
+            (_,Nothing) = False
+            _ = 
+                startJ = Just startPc
+                endJ = Just
+
+       all [startPc /= Nothing, 
+            endPc /= Nothing,
+            endPc == Just Empty, --  end `notelem` bd  (change to this when removing empties)
+            valPlyr startPc plyr
+    
+-}
 
 -- Tested and Works
 rightDir :: Loc -> Maybe Piece -> Loc ->  Maybe Piece -> Player -> Bool
@@ -231,13 +266,16 @@ rightDir (y1,x1) (Just (Reg color)) (y2,x2) (Just Empty) plyr
   | otherwise                    = False
 
 
-valPlyr :: Maybe Piece -> Player -> Bool  
+valPlyr :: Maybe Piece -> Player -> Bool   --This should not take in a Maybe Piece!!
 valPlyr (Just (Reg color)) turn = (color == turn)
 valPlyr (Just (King color)) turn = (color == turn)
 
 -- Fogarty doesn't like this function, will take out & replace calls with lookup
+{-
 pAtLoc :: Loc -> Board -> Maybe Piece
 pAtLoc loc bd = lookup loc bd
+-}
+
 
 winner :: Board -> Maybe Player
 winner board
