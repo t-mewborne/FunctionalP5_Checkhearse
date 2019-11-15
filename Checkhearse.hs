@@ -15,12 +15,10 @@ data Piece = Reg Player | King Player | Empty deriving (Eq,Show)
 
 type Loc = (Int,Int) --(row,column)
 type Square = (Loc,Piece)
---type Board = [[Piece]]
 type Board = [Square] --choose between these two types for board (only contains playable spaces)
 type Game = (Board,Player) --player = current turn
-
--- type Board = [Square] (2nd Declare)
 type Move = (Loc,Loc) --((Start),(End),Turn)
+type Outcome = Player | Tie
 
 buildGame :: Game --Initial State of the board
 buildGame = 
@@ -188,7 +186,6 @@ makeJump (bd, plyr) ((r1, c1), (r2, c2)) =
         ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
 -}
 
---doJump Loc -> Loc -> Loc -> Board -> Player -> Piece -> Maybe Game
 doJump :: Loc -> Loc -> Square -> Game -> Game
 doJump start end victim (bd,plyr) =
     let activePiece =
@@ -215,7 +212,6 @@ makeScoot (bd, plyr) (start, end) =
       remStart = setPiece bd (start, activePiece) Empty
       nextTurn = otherPlayer plyr
   in Just (setPiece remStart (end,Empty) activePiece, nextTurn)
-
 
 
 -- will change into 2 funcs when we get rid of empties
@@ -246,7 +242,6 @@ validMove (bd,plyr) (startLoc,endLoc) =
             (Just start,Just Empty) -> valPlyr start plyr && rightDir (startLoc,start) (endLoc,Empty) --change "empty" to "nothing"
             _ -> False
 
-
 {-
 -- Tested and Works
 rightDir :: Loc -> Maybe Piece -> Loc ->  Maybe Piece -> Player -> Bool
@@ -263,8 +258,6 @@ rightDir ((y1,x1),King _) ((y2,x2),Empty) = True
 rightDir ((y1,x1),Reg color) ((y2,x2),Empty) = (color == Black && (y2-y1>0)) || (color == Red && (y2-y1<0))
 
 
-
-
 --returns whether or not a piece is a player's piece
 {-
 valPlyr :: Maybe Piece -> Player -> Bool   --This should not take in a Maybe Piece!!
@@ -277,18 +270,10 @@ valPlyr :: Piece -> Player -> Bool
 valPlyr (King plyr) turn = (plyr == turn)
 valPlyr (Reg  plyr) turn = (plyr == turn)
 
-
-
--- Fogarty doesn't like this function, will take out & replace calls with lookup
-{-
-pAtLoc :: Loc -> Board -> Maybe Piece
-pAtLoc loc bd = lookup loc bd
--}
-
-
-winner :: Board -> Maybe Player
+-- will implement a counter that cuts game at certain point
+winner :: Board -> Maybe Outcome
 winner board
-    | nobodyWins = Nothing
+    | nobodyWins = Just Tie
     | redWins = Just Red
     | blackWins = Just Black
     | otherwise = Nothing
@@ -299,6 +284,15 @@ winner board
           blackWins = all (\square -> (snd square) == (Reg Black)  ||
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
+
+validMovesAtTime :: Game -> [Moves]
+validMovesAtTime (bd, plyer) =
+  let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
+--      mvsForSquare ((r1, c1), pc) = [(l,pc) | l <- 
+      
+
+bestMove :: [Move] -> Move
+bestMove moves = undefined
 
 readLoc :: String -> Maybe Loc
 readLoc str = 
