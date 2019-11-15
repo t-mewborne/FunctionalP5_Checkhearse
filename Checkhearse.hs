@@ -223,6 +223,7 @@ makeScoot (bd, plyr) (start, end) =
 setPiece :: Board -> Square -> Piece -> Board
 setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
 
+{-
 -- validMove checks if start & end are on the board & if start is player's color
 -- Tested and VERY CORRECT
 validMove :: Game -> Move -> Bool
@@ -235,28 +236,18 @@ validMove (bd, plyr) ((x1, y1), (x2, y2))
      | otherwise                                       = True  -- is a valid general move
   where start = lookup (x1,y1) bd
         end = lookup (x2,y2) bd
-
-{-
-validMove (bd,plyr) (startLoc,endLoc)
-    do  someStuff
-        startPc <- lookup startLoc bd
-        endPc <- lookup endLoc bd
-         
-
-       case (startPc,endPc) of
-            (Nothing,_) = False
-            (_,Nothing) = False
-            _ = 
-                startJ = Just startPc
-                endJ = Just
-
-       all [startPc /= Nothing, 
-            endPc /= Nothing,
-            endPc == Just Empty, --  end `notelem` bd  (change to this when removing empties)
-            valPlyr startPc plyr
-    
 -}
 
+validMove :: Game -> Move -> Bool
+validMove (bd,plyr) (startLoc,endLoc) =
+    let startPc = lookup startLoc bd
+        endPc = lookup endLoc bd
+    in  case (startPc,endPc) of
+            (Just start,Just Empty) -> valPlyr start plyr && rightDir (startLoc,start) (endLoc,Empty) --change "empty" to "nothing"
+            _ -> False
+
+
+{-
 -- Tested and Works
 rightDir :: Loc -> Maybe Piece -> Loc ->  Maybe Piece -> Player -> Bool
 rightDir (y1,x1) (Just (King color)) (y2,x2) (Just Empty) plyr = True
@@ -264,11 +255,29 @@ rightDir (y1,x1) (Just (Reg color)) (y2,x2) (Just Empty) plyr
   | (color == Black && (y2-y1>0))= True
   | (color == Red && (y2-y1<0))  = True
   | otherwise                    = False
+-}
+
+--Makes sure you are moving in the right direction based on piece and its color
+rightDir :: Square -> Square -> Bool
+rightDir ((y1,x1),King _) ((y2,x2),Empty) = True
+rightDir ((y1,x1),Reg color) ((y2,x2),Empty) = (color == Black && (y2-y1>0)) || (color == Red && (y2-y1<0))
 
 
+
+
+--returns whether or not a piece is a player's piece
+{-
 valPlyr :: Maybe Piece -> Player -> Bool   --This should not take in a Maybe Piece!!
 valPlyr (Just (Reg color)) turn = (color == turn)
 valPlyr (Just (King color)) turn = (color == turn)
+valPlyr _ = False
+-}
+
+valPlyr :: Piece -> Player -> Bool
+valPlyr (King plyr) turn = (plyr == turn)
+valPlyr (Reg  plyr) turn = (plyr == turn)
+
+
 
 -- Fogarty doesn't like this function, will take out & replace calls with lookup
 {-
