@@ -18,7 +18,7 @@ type Square = (Loc,Piece)
 type Board = [Square] --choose between these two types for board (only contains playable spaces)
 type Game = (Board,Player) --player = current turn
 type Move = (Loc,Loc) --((Start),(End),Turn)
-type Outcome = Player | Tie
+data Outcome = Player | Tie
 
 buildGame :: Game --Initial State of the board
 buildGame = 
@@ -285,11 +285,15 @@ winner board
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
 
-validMovesAtTime :: Game -> [Moves]
+validMovesAtTime :: Game -> [Move]
 validMovesAtTime (bd, plyer) =
   let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
---      mvsForSquare ((r1, c1), pc) = [(l,pc) | l <- 
-      
+      mvsForSquare ((r, c), pc) = [((r,c), l) | l <- [(r+1, c+1), (r+1, c-1), (r-1, c-1), (r-1, c+1),
+                                                      (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
+--      mvsForPlayer = (\square -> mvsForSquare square) plSquare
+      mvsForPlayer [] = []
+      mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
+  in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
 bestMove :: [Move] -> Move
 bestMove moves = undefined
