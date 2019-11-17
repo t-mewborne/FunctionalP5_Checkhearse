@@ -307,8 +307,8 @@ winner board
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
 
-validMovesAtTime :: Game -> [Move]
-validMovesAtTime (bd, plyer) =
+validMoves :: Game -> [Move]
+validMoves (bd, plyer) =
   let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
       mvsForSquare ((r, c), pc) = [((r,c), l) | l <- [(r+1, c+1), (r+1, c-1), (r-1, c-1), (r-1, c+1),
                                                       (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
@@ -316,8 +316,16 @@ validMovesAtTime (bd, plyer) =
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
-bestMove :: [Move] -> [Move]
-bestMove moves = undefined
+bestMoves :: Game -> [Move]
+bestMoves (bd, plyer) = 
+  let allMoves = validMoves (bd, plyer)
+  
+-- things to take into consideration:
+--   1) get pnts
+--   2) dont get killed:
+--      i) dont move to spot that gets you killed
+--      ii) mv a defending pc to help a pc about to get killed
+--   3) make a king pc
 
 readLoc :: String -> Maybe Loc
 readLoc str = 
