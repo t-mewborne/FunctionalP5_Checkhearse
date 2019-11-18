@@ -21,6 +21,9 @@ type Game = (Board,Player) --player = current turn
 type Move = (Loc,Loc) --((Start),(End),Turn)
 --data Outcome = Player | Tie deriving (Eq, Show)
 
+outOf :: Integer -> Integer -> Rational
+outOf a b = (fromIntegral a) % (fromIntegral b)
+
 buildGame :: Game --Initial State of the board
 buildGame = 
     let bd = buildRow 1 2 (Reg Black) ++
@@ -316,10 +319,33 @@ validMoves (bd, plyer) =
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
-bestMoves :: Game -> [Move]
-bestMoves (bd, plyer) = 
-  let allMoves = validMoves (bd, plyer)
+
+bestMove :: Game -> Move
+bestMove (bd, plyr) =
+  let allMoves = validMoves (bd, plyr)
+      assocMvPercent = [((bestMvRec (updateBoard (bd, plyr) mv) plyr), mv) | mv <- allMoves]
+  in snd $ maximum assocMvPercent
+
+bestMvRec :: Maybe Game -> Player -> Rational
+bestMvRec maybeGm turn =
+  let gm = case maybeGm of
+             Just g -> g
+             Nothing -> error "bestMvRec got invalid game"
+      lst = aux gm turn
+      (bd, p) = gm
+      aux :: Game -> Player -> [Integer]
+      aux gm plyr =
+        case winner bd of 
+          Nothing -> [bestMvRec g turn | g <- allGames gm]
+          Just turn -> 1
+          Just _ -> 0
+  in (sum lst) `outOf` (length lst)
   
+
+-- gives list of possible gamestates
+allGames (bd, plyer) =
+  let allMoves = validMoves (bd, plyer)
+  in [updateBoard (bd, plyer) mv | mv <- allMoves]
 -- things to take into consideration:
 --   1) get pnts
 --   2) dont get killed:
