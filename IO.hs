@@ -5,8 +5,15 @@ import System.Directory
 
 main :: IO ()
 main = do
-    --exists <- doesFileExist "game.txt"
     fileName <- prompt "Please enter the file name: " -- Should we keep the file name the same every time
+    {-exists <- doesFileExist fileName
+     -let game = 
+     -  if (exists)
+     -  then  do board <- readFile fileName
+     -        let rows = lines board
+     -        loadGame rows
+     -  else buildGame
+     -}
     board <- readFile fileName
     let rows = lines board
     let game = loadGame rows
@@ -38,9 +45,9 @@ loadRow (space:spaces) (r,c) =
         '3' -> ((r,c), King Black)
         '4' -> ((r,c), King Red)):(loadRow spaces (r,c+1))
 
---Write the game to a file
-writeGame :: Game -> IO ()
-writeGame (board,turn) = 
+--Write a game to a file
+writeGame :: Game-> String -> IO ()
+writeGame (board,turn) fileName = 
     let plyr = if (turn == Black) then "1\n" else "2\n"
         aux :: Board -> Loc -> String
         aux _ (r,9) = '\n':(aux board (r+1,1))
@@ -52,17 +59,16 @@ writeGame (board,turn) =
                 Reg Red    -> '2'
                 King Black -> '3'
                 King Red   -> '4'):(aux board (r,c+1))
-
-    in writeFile "game.txt" (plyr ++ (aux board (1,1)))
+    in writeFile fileName (plyr ++ (aux board (1,1)))
 
 --Search the board to determine if there is a piece at the given location
 searchBoard :: Board -> Loc -> Piece
 searchBoard board loc = 
     case lookup loc board of
-        Just piece -> piece
-        Nothing -> Empty
+         Just piece -> piece
+         Nothing -> Empty
 
---This function does not determine the best move, rather it displayes all moves passed in
+--This function prints any move passed to it with the text "Best Move: "
 showBestMove :: Move -> IO () 
 showBestMove move =
     let aux :: Move -> String
@@ -74,15 +80,15 @@ showBestMove move =
 {-
 file format of buildGame:
 
-1
-01010101
-10101010
-01010101
-00000000
-00000000
-20202020
-02020202
-20202020
+1          |  PLAYER TURN
+01010101   |  ROW 1 (Black Pieces)
+10101010   |
+01010101   |
+00000000   |  ROW 4 (Empty)
+00000000   |
+20202020   |  ROW 5 (Red Pieces)
+02020202   |
+20202020   |
 
 *zeros can represent empty spaces or invalid spaces
 *the first line represents who's turn it is
