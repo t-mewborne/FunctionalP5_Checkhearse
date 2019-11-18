@@ -19,7 +19,7 @@ type Square = (Loc,Piece)
 type Board = [Square] --choose between these two types for board (only contains playable spaces)
 type Game = (Board,Player) --player = current turn
 type Move = (Loc,Loc) --((Start),(End),Turn)
---data Outcome = Player | Tie deriving (Eq, Show)
+data Outcome = Won Player | Tie deriving (Eq, Show)
 
 outOf :: Integer -> Integer -> Rational
 outOf a b = (fromIntegral a) % (fromIntegral b)
@@ -296,11 +296,11 @@ valPlyr (King plyr) turn = (plyr == turn)
 valPlyr (Reg  plyr) turn = (plyr == turn)
 
 -- will implement a counter that cuts game at certain point
-winner :: Board -> Maybe Player--Outcome
-winner board
-    | nobodyWins = Nothing--Just Tie
-    | redWins = Just Red
-    | blackWins = Just Black
+winner :: Game -> Maybe Outcome
+winner (board, p)
+    | nobodyWins = Just Tie
+    | redWins = Just $ Won Red
+    | blackWins = Just $ Won Black
     | otherwise = Nothing
     where nobodyWins = all (\square -> (snd square) == Empty) board
           redWins = all (\square -> (snd square) == (Reg Red)  ||
@@ -309,6 +309,18 @@ winner board
           blackWins = all (\square -> (snd square) == (Reg Black)  ||
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
+
+-- means current player can force a win, that move exists
+willWin :: Game -> Outcome
+willWin (bd, plyr) = 
+  let possGames = allGames (bd, plyr)
+      outcomes = [winner gm | gm <- possGames, w=winner gm]
+--
+  in if (Won plyr `elem` outcomes)
+     then Won plyr
+     else if (Tie `elem` outcomes)
+     then Tie
+     else Won $ otherPlayer player
 
 validMoves :: Game -> [Move]
 validMoves (bd, plyer) =
@@ -319,6 +331,13 @@ validMoves (bd, plyer) =
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
+
+bestMove :: Game -> Move
+bestMove (bd, plyr) =
+  let allMoves = validMoves (bd, plyr)
+      
+      aux :: Game -> Player -> Move
+      
 
 bestMove :: Game -> Move
 bestMove (bd, plyr) =
@@ -339,7 +358,8 @@ bestMvRec maybeGm turn =
           Nothing -> [bestMvRec g turn | g <- allGames gm]
           Just turn -> 1
           Just _ -> 0
-  in (sum lst) `outOf` (length lst)
+  
+--  in (sum lst) `outOf` (length lst)
   
 
 -- gives list of possible gamestates
