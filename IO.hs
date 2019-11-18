@@ -63,14 +63,12 @@ searchBoard board loc =
         Nothing -> Empty
 
 --This function does not determine the best move, rather it displayes all moves passed in
-showBestMove :: [Move] -> IO () 
-showBestMove moves =
-    let aux :: [Move] -> String
-        aux [] = []
-        aux (((r1,c1),(r2,c2)):moves) = 
-            "\tMove the piece at (" ++ show r1 ++ ", " ++ show c1 ++
+showBestMove :: Move -> IO () 
+showBestMove move =
+    let aux :: Move -> String
+        aux ((r1,c1),(r2,c2)) "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++
             ") to (" ++ show r2 ++ ", " ++ show c2 ++ ").\n" ++ aux moves
-    in putStr $ "Best Moves:\n" ++ (aux moves)
+    in putStr $ "Best Move: " ++ (aux move)
             
 
 {-
