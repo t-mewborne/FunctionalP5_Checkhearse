@@ -19,7 +19,10 @@ type Square = (Loc,Piece)
 type Board = [Square] --choose between these two types for board (only contains playable spaces)
 type Game = (Board,Player) --player = current turn
 type Move = (Loc,Loc) --((Start),(End),Turn)
---data Outcome = Player | Tie deriving (Eq, Show)
+data Outcome = Won Player | Tie deriving (Eq, Show)
+
+outOf :: Integer -> Integer -> Rational
+outOf a b = (fromIntegral a) % (fromIntegral b)
 
 buildGame :: Game --Initial State of the board
 buildGame = 
@@ -293,33 +296,107 @@ valPlyr (King plyr) turn = (plyr == turn)
 valPlyr (Reg  plyr) turn = (plyr == turn)
 
 -- will implement a counter that cuts game at certain point
-winner :: Board -> Maybe Player--Outcome
-winner board
-    | nobodyWins = Nothing--Just Tie
-    | redWins = Just Red
-    | blackWins = Just Black
+winner :: Game -> Maybe Outcome
+winner (board, p)
+    | redWins = Just $ Won Red
+    | blackWins = Just $ Won Black
     | otherwise = Nothing
-    where nobodyWins = all (\square -> (snd square) == Empty) board
-          redWins = all (\square -> (snd square) == (Reg Red)  ||
+    where redWins = all (\square -> (snd square) == (Reg Red)  ||
                                   (snd square) == (King Red) ||
                                   (snd square) == (Empty)) board
           blackWins = all (\square -> (snd square) == (Reg Black)  ||
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
 
+-- means current player can force a win, that move exists
+{-
+willWin :: Game -> Outcome
+willWin (bd, plyr) = 
+  let possGames = allGames (bd, plyr)
+      outcomes = [winner gm | gm <- possGames, w=winner gm]
+--
+  in if (Won plyr `elem` outcomes)
+     then Won plyr
+     else if (Tie `elem` outcomes)
+     then Tie
+     else Won $ otherPlayer player
+-}
 validMoves :: Game -> [Move]
 validMoves (bd, plyer) =
   let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
       mvsForSquare ((r, c), pc) = [((r,c), l) | l <- [(r+1, c+1), (r+1, c-1), (r-1, c-1), (r-1, c+1),
-                                                      (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
+                                   (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
       mvsForPlayer [] = []
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
+bestMove :: Game -> (Move, Outcome)
+bestMove game =
+  case winner game of
+    Just g -> (((-1,-1), (-1,-1)), g) -- need to figure out return here to indicate no-move
+    Nothing -> bestMoveRec game
+
+bestMoveRec :: Game -> (Move, Outcome)
+bestMoveRec (bd, plyr) =
+  let possMvsAndGames = movesAndGames (bd, plyr) -- [(Move, Game)]
+      possMvsAndOutcomes = [willWin mvAndGame | mvAndGame <- possMvsAndGames] -- [(Move, Outcome)]
+  in bestOutcomeForPlayer plyr possMvsAndOutcomes -- (Move, Outcome)
+
+movesAndGames :: Game -> [(Move, Game)]
+movesAndGames gm =
+  let mvs = validMoves gm
+      gmsForMvs = catMaybes [updateBoard gm mv | mv <- mvs]
+  in zip mvs gmsForMvs
+
+willWin :: (Move, Game) -> (Move, Outcome)
+willWin (move, (bd, plyr)) =
+  let res = case winner (bd, plyr) of
+              Just o -> [(move, o)]
+--              Nothing -> map (\mvAndGm -> ++(willWin mvAndGm)) (movesAndGames (bd, plyr))
+              Nothing -> foldr (\mAndGm x -> mAndGm ++ x) (map (\mvAndGm -> (willWin mvAndGm)) (movesAndGames (bd, plyr))) []
+  in bestOutcomeForPlayer plyr res
+
+bestOutcomeForPlayer :: Player -> [(Move, Outcome)] -> (Move, Outcome)
+bestOutcomeForPlayer plyr movesAndOuts =
+  let wins = [(mv, w) | (mv, w) <- movesAndOuts, w== (Won plyr)]
+      ties = [(mv, t) | (mv, t) <- movesAndOuts, t== (Tie)]
+      losses = [(mv, l) | (mv, l) <- movesAndOuts, l== (Won (otherPlayer plyr))]
+  in if wins /= []
+     then head wins
+     else if ties /= []
+     then head ties
+     else head losses
+
+
+{-
 bestMoves :: Game -> [Move]
-bestMoves (bd, plyer) = 
+bestMoves (bd, plyr) =
+  let allMoves = validMoves(bd, plyr)
+  in [mv | mv <- allMoves, (Won plyr) `elem` (willWin (updateBoard (bd, plyr) mv))]
+
+willWin :: Maybe Game -> [Outcome]
+willWin maybeGame =
+  let gm = case maybeGame of
+             Just g -> g
+             Nothing -> error "willWin got invalid game" 
+      res = winner gm
+      aux Nothing = [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+      aux Just o = o 
+-}
+--  in case res of
+--       Nothing -> [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+--       Just _ -> [res]
+--  in if res==Nothing
+--     then [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+--     else case res of
+--            Just o -> [o]
+--            Nothing -> error "in willWin"
+--  in aux res  
+
+-- gives list of possible gamestates
+allGames (bd, plyer) =
   let allMoves = validMoves (bd, plyer)
-  
+  in [updateBoard (bd, plyer) mv | mv <- allMoves]
 -- things to take into consideration:
 --   1) get pnts
 --   2) dont get killed:
