@@ -316,10 +316,11 @@ validMoves (bd, plyer) =
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
+  {-
 bestMoves :: Game -> [Move]
 bestMoves (bd, plyer) = 
   let allMoves = validMoves (bd, plyer)
-  
+  -}
 -- things to take into consideration:
 --   1) get pnts
 --   2) dont get killed:
