@@ -5,6 +5,7 @@ import Data.Char
 import System.Environment
 import System.Console.GetOpt
 import Text.Read
+import Data.List
 
 {-
 INSTRUCTIONS FOR USAGE:
@@ -48,7 +49,7 @@ main = do
     if Help `elem` flags || not (null errors) || length inputs > 1
     then do mapM putStr errors
             putStrLn $ usageInfo "Usage: fortunes [options] [file]" options
-    else do let fileName = if null inputs then "game.txt" else  head inputs
+    else do let fileName = head inputs
             {-exists <- doesFileExist fileName
             -let game = 
             -  if (exists)
@@ -59,12 +60,30 @@ main = do
             -}
             board <- readFile fileName
             let rows = lines board
-            let game = loadGame rows
-            if Winner `elem` flags
-            then showBestMove ((1,2),(2,1))
+                game = loadGame rows
+                move = (moveTerm (head $ tail inputs))
+            if Move `elem` flags
+            then putStrLn $ showBoard $ updateBoard game move
+            -- ./checkhearse game.txt 1,2 3,4 -> convert string to ints -> convert ints to tuple ->
+            -- convert tuple to move
+            -- splitAt "," 1 2 -> read "1" = 1 -> 1 = a, 2 = b (a, b)
+            --else putStrLn $ "Hi"
+            --if Winner `elem` flags
+            --then showBestMove ((1,2),(2,1))
             else putStrLn $ showBoard game
 
+-- ./checkhearse game.txt 1,2 3,4 -> "1,2" -> "1" "2" -> 1 2
+-- ./checkhearse game.txt 1,2,3,4
 
+
+getMove :: [Flag] -> IO String
+
+moveTerm :: String -> Move
+moveTerm first =
+  let a = [read x | x <- splitOn "," first]
+      b = (head a, head $ tail a)
+      c = (head $ tail $ tail a, last a)
+  in  (b,c)
 
 --Ask the user a question
 prompt :: String -> IO String
@@ -117,14 +136,15 @@ searchBoard board loc =
 
 --This function prints any move passed to it with the text "Best Move: "
 
-
+{-
 aux :: Move -> [String]
 aux ((r1,c1),(r2,c2)) = "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++
     ") to (" ++ show r2 ++ ", " ++ show c2 ++ ").\n" -- ++ aux move
 
 showBestMove :: Move -> IO () 
 showBestMove move = putStr $ "Best Move: " ++ (aux move)
-            
+-}
+
 
 {-
 file format of buildGame:
