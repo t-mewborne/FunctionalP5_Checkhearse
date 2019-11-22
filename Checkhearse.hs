@@ -330,38 +330,45 @@ validMoves (bd, plyer) =
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
-{-
-bestMove :: Game -> Move
-bestMove (bd, plyr) =
-  let allMoves = validMoves (bd, plyr)
-      
-      aux :: Game -> Player -> Move
-      
+bestMove :: Game -> (Move, Outcome)
+bestMove game =
+  case winner game of
+    Just g -> (((-1,-1), (-1,-1)), g) -- need to figure out return here to indicate no-move
+    Nothing -> bestMoveRec game
 
-bestMove :: Game -> Move
-bestMove (bd, plyr) =
-  let allMoves = validMoves (bd, plyr)
-      assocMvPercent = [((bestMvRec (updateBoard (bd, plyr) mv) plyr), mv) | mv <- allMoves]
-  in snd $ maximum assocMvPercent
--}
-{-
-bestMvRec :: Maybe Game -> Player -> Rational
-bestMvRec maybeGm turn =
-  let gm = case maybeGm of
-             Just g -> g
-             Nothing -> error "bestMvRec got invalid game"
-      lst = aux gm turn
-      (bd, p) = gm
-      aux :: Game -> Player -> [Integer]
-      aux gm plyr =
-        case winner bd of 
-          Nothing -> [bestMvRec g turn | g <- allGames gm]
-          Just turn -> 1
-          Just _ -> 0
-  
---  in (sum lst) `outOf` (length lst)
- -}
+bestMoveRec :: Game -> (Move, Outcome)
+bestMoveRec (bd, plyr) =
+  let possMvsAndGames = movesAndGames (bd, plyr) -- [(Move, Game)]
+      possMvsAndOutcomes = [willWin mvAndGame | mvAndGame <- possMvsAndGames] -- [(Move, Outcome)]
+  in bestOutcomeForPlayer plyr possMvsAndOutcomes -- (Move, Outcome)
 
+movesAndGames :: Game -> [(Move, Game)]
+movesAndGames gm =
+  let mvs = validMoves gm
+      gmsForMvs = catMaybes [updateBoard gm mv | mv <- mvs]
+  in zip mvs gmsForMvs
+
+willWin :: (Move, Game) -> (Move, Outcome)
+willWin (move, (bd, plyr)) =
+  let res = case winner (bd, plyr) of
+              Just o -> [(move, o)]
+--              Nothing -> map (\mvAndGm -> ++(willWin mvAndGm)) (movesAndGames (bd, plyr))
+              Nothing -> foldr (\mAndGm x -> mAndGm ++ x) (map (\mvAndGm -> (willWin mvAndGm)) (movesAndGames (bd, plyr))) []
+  in bestOutcomeForPlayer plyr res
+
+bestOutcomeForPlayer :: Player -> [(Move, Outcome)] -> (Move, Outcome)
+bestOutcomeForPlayer plyr movesAndOuts =
+  let wins = [(mv, w) | (mv, w) <- movesAndOuts, w== (Won plyr)]
+      ties = [(mv, t) | (mv, t) <- movesAndOuts, t== (Tie)]
+      losses = [(mv, l) | (mv, l) <- movesAndOuts, l== (Won (otherPlayer plyr))]
+  in if wins /= []
+     then head wins
+     else if ties /= []
+     then head ties
+     else head losses
+
+
+{-
 bestMoves :: Game -> [Move]
 bestMoves (bd, plyr) =
   let allMoves = validMoves(bd, plyr)
@@ -375,6 +382,7 @@ willWin maybeGame =
       res = winner gm
       aux Nothing = [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
       aux Just o = o 
+-}
 --  in case res of
 --       Nothing -> [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
 --       Just _ -> [res]
@@ -383,7 +391,7 @@ willWin maybeGame =
 --     else case res of
 --            Just o -> [o]
 --            Nothing -> error "in willWin"
-  in aux res  
+--  in aux res  
 
 -- gives list of possible gamestates
 allGames (bd, plyer) =
