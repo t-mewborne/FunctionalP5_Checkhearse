@@ -298,12 +298,10 @@ valPlyr (Reg  plyr) turn = (plyr == turn)
 -- will implement a counter that cuts game at certain point
 winner :: Game -> Maybe Outcome
 winner (board, p)
-    | nobodyWins = Just Tie
     | redWins = Just $ Won Red
     | blackWins = Just $ Won Black
     | otherwise = Nothing
-    where nobodyWins = all (\square -> (snd square) == Empty) board
-          redWins = all (\square -> (snd square) == (Reg Red)  ||
+    where redWins = all (\square -> (snd square) == (Reg Red)  ||
                                   (snd square) == (King Red) ||
                                   (snd square) == (Empty)) board
           blackWins = all (\square -> (snd square) == (Reg Black)  ||
@@ -311,6 +309,7 @@ winner (board, p)
                                     (snd square) == (Empty)) board
 
 -- means current player can force a win, that move exists
+{-
 willWin :: Game -> Outcome
 willWin (bd, plyr) = 
   let possGames = allGames (bd, plyr)
@@ -321,17 +320,17 @@ willWin (bd, plyr) =
      else if (Tie `elem` outcomes)
      then Tie
      else Won $ otherPlayer player
-
+-}
 validMoves :: Game -> [Move]
 validMoves (bd, plyer) =
   let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
       mvsForSquare ((r, c), pc) = [((r,c), l) | l <- [(r+1, c+1), (r+1, c-1), (r-1, c-1), (r-1, c+1),
-                                                      (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
+                                   (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
       mvsForPlayer [] = []
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
 
-
+{-
 bestMove :: Game -> Move
 bestMove (bd, plyr) =
   let allMoves = validMoves (bd, plyr)
@@ -344,7 +343,8 @@ bestMove (bd, plyr) =
   let allMoves = validMoves (bd, plyr)
       assocMvPercent = [((bestMvRec (updateBoard (bd, plyr) mv) plyr), mv) | mv <- allMoves]
   in snd $ maximum assocMvPercent
-
+-}
+{-
 bestMvRec :: Maybe Game -> Player -> Rational
 bestMvRec maybeGm turn =
   let gm = case maybeGm of
@@ -360,7 +360,30 @@ bestMvRec maybeGm turn =
           Just _ -> 0
   
 --  in (sum lst) `outOf` (length lst)
-  
+ -}
+
+bestMoves :: Game -> [Move]
+bestMoves (bd, plyr) =
+  let allMoves = validMoves(bd, plyr)
+  in [mv | mv <- allMoves, (Won plyr) `elem` (willWin (updateBoard (bd, plyr) mv))]
+
+willWin :: Maybe Game -> [Outcome]
+willWin maybeGame =
+  let gm = case maybeGame of
+             Just g -> g
+             Nothing -> error "willWin got invalid game" 
+      res = winner gm
+      aux Nothing = [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+      aux Just o = o 
+--  in case res of
+--       Nothing -> [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+--       Just _ -> [res]
+--  in if res==Nothing
+--     then [willWin (updateBoard gm mv) | mv <- (validMoves gm)]
+--     else case res of
+--            Just o -> [o]
+--            Nothing -> error "in willWin"
+  in aux res  
 
 -- gives list of possible gamestates
 allGames (bd, plyer) =
