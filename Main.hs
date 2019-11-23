@@ -47,7 +47,7 @@ main = do
     args <- getArgs
     let (flags, inputs, errors) = getOpt Permute options args
     putStrLn $ show (flags, inputs, errors)
-    if Help `elem` flags || not (null errors) || length inputs > 1
+    if Help `elem` flags || not (null errors) || length inputs == 0 || length inputs > 1 
     then do mapM putStr errors
             putStrLn $ usageInfo "Usage: ./checkhearse file [options]" options
     else do let fileName = head inputs
@@ -62,16 +62,20 @@ main = do
             board <- readFile fileName
             let rows = lines board
                 game = loadGame rows
-                moveShort = (moveTerm (head $ tail inputs))
+                moveShort = moveTerm $ getMove flags
                 
             --if Winner `elem` flags
             --then putStrLn $ "You are fun."
-            if Current `elem` flags
+            if Winner `elem` flags
+            then showBestMove $ fst $ bestMove game
+            else if Current `elem` flags
             then putStrLn $ showBoard game
             else do let moveBoard = updateBoard game moveShort
                     case moveBoard of
                         Just game -> putStrLn $ showBoard $ game
                         _ -> putStrLn $ "Invalid game"
+
+-- count needs to be less than 5
                  
             --if Move `elem` flags
             --then putStrLn $ showBoard $ updateBoard game move
@@ -168,14 +172,14 @@ showBestMove :: Move -> IO ()
 
 showBestMove move = putStr $ "Best Move: " ++ (aux move)
 -}
-
+showBestMove :: Move -> IO () 
 showBestMove move =
     let aux :: Move -> String
         aux ((r1,c1),(r2,c2)) = 
             "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++") to (" ++ 
             show r2 ++ ", " ++ show c2 ++ ").\n"
-    in putStr $ "Best Move: " ++ (aux move)
-            
+    in putStr $ "Best Move: " ++ (aux move) 
+    
 showBoard :: Game -> String
 showBoard (bd,plyr,count) = 
     let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
