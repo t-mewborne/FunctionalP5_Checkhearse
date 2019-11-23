@@ -1,4 +1,4 @@
-module Main where
+module Mainabc where
 import System.CPUTime
 import Data.Tuple (swap)
 import System.Environment

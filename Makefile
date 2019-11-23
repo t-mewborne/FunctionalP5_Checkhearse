@@ -3,10 +3,10 @@
 .PHONY: build init test clean doc deploy stage
 
 build: 
-	ghc --make -O -o checkhearse Main.hs
+	ghc --make -O -o checkhearse IO.hs
 
 prof:
-	ghc --make -prof -o checkhearse Main.hs
+	ghc --make -prof -o checkhearse IO.hs
 
 all: build test
 

@@ -262,11 +262,19 @@ bestOutcomeForPlayer plyr movesAndOuts =
      then head ties
      else head losses
 
+
+  {-
+bestMoves :: Game -> [Move]
+bestMoves (bd, plyer) = 
+  let allMoves = validMoves (bd, plyer)
+  -}
+
 {-
 -- gives list of possible gamestates
 allGames (bd, plyer) =
   let allMoves = validMoves (bd, plyer)
   in [updateBoard (bd, plyer) mv | mv <- allMoves]
+
 -- things to take into consideration:
 --   1) get pnts
 --   2) dont get killed:

@@ -1,25 +1,109 @@
 module IO where
-import Checkhearse --Link files
-import Data.List.Split --splitOn for readLoc
-import Data.Char --isDigit
-import System.Directory --File writing
+import Checkhearse
+import System.Directory
+import Data.Char
+import System.Environment
+import System.Console.GetOpt
+import Text.Read
+import Data.List.Split
 
+
+{-
+INSTRUCTIONS FOR USAGE:
+
+IF FIRST TIME, PUT THIS IN THE TERMINAL:
+> make setup
+
+ELSE
+> make
+
+TO RUN (use appropiate flags. add -h at end for help)
+> ./checkhearse 
+
+IN TERMINAL:
+> ghci
+> :load Main.hs
+> main
+
+ALSO
+runhaskell IO.hs
+
+-}
+
+data Flag = Help | Winner | Current | All | Count String | Move String | Verb | Interact deriving (Eq, Show)
+
+options :: [OptDescr Flag]
+options = [ Option ['h'] ["help"] (NoArg Help) "Print out a help message and exitt the program."
+          , Option ['c'] ["current"] (NoArg Current) "Print out the current board from the file."
+          , Option ['w'] ["winner"] (NoArg Winner) "Print out the best move using an exhaustive search (no cut-off depth)."
+          , Option ['d'] ["depth"] (ReqArg Count "<k>") "Use num as a cut-off depth instead of default."
+          , Option ['m'] ["move"] (ReqArg Move "<m>") "Should print out the restulting game."
+          , Option ['v'] ["verbose"] (NoArg Verb) "Output a move and the description of the move."
+          , Option ['i'] ["interactive"] (NoArg Interact) "Play a game against the computer."
+          ]
 
 main :: IO ()
 main = do
-    fileName <- prompt "Please enter the file name: " -- Should we keep the file name the same every time
-    {-exists <- doesFileExist fileName
-     -let game = 
-     -  if (exists)
-     -  then  do board <- readFile fileName
-     -        let rows = lines board
-     -        loadGame rows
-     -  else buildGame
-     -}
-    board <- readFile fileName
-    let rows = lines board
-    let game = loadGame rows
-    putStrLn $ showBoard game
+    args <- getArgs
+    let (flags, inputs, errors) = getOpt Permute options args
+    putStrLn $ show (flags, inputs, errors)
+    if Help `elem` flags || not (null errors) || length inputs > 1
+    then do mapM putStr errors
+            putStrLn $ usageInfo "Usage: ./checkhearse file [options]" options
+    else do let fileName = head inputs
+            {-exists <- doesFileExist fileName
+            -let game = 
+            -  if (exists)
+            -  then  do board <- readFile fileName
+            -        let rows = lines board
+            -        loadGame rows
+            -  else buildGame
+            -}
+            board <- readFile fileName
+            let rows = lines board
+                game = loadGame rows
+                moveShort = (moveTerm (head $ tail inputs))
+                
+            --if Winner `elem` flags
+            --then putStrLn $ "You are fun."
+            if Current `elem` flags
+            then putStrLn $ showBoard game
+            else do let moveBoard = updateBoard game moveShort
+                    case moveBoard of
+                        Just game -> putStrLn $ showBoard $ game
+                        _ -> putStrLn $ "Invalid game"
+                 
+            --if Move `elem` flags
+            --then putStrLn $ showBoard $ updateBoard game move
+            -- ./checkhearse game.txt 1,2 3,4 -> convert string to ints -> convert ints to tuple ->
+            -- convert tuple to move
+            -- splitAt "," 1 2 -> read "1" = 1 -> 1 = a, 2 = b (a, b)
+            --else putStrLn $ "Hi"
+            --if Winner `elem` flags
+            --then showBestMove ((1,2),(2,1))
+            --else 
+
+-- ./checkhearse game.txt 1,2 3,4 -> "1,2" -> "1" "2" -> 1 2
+-- ./checkhearse game.txt 1,2,3,4
+
+
+getMove :: [Flag] -> String
+getMove (Move s:_) = s :: String
+getMove (_:flags) = getMove flags
+getName [] = error "Please enter a move."
+
+
+getCount :: [Flag] -> Maybe Int
+getCount (Count s:_) = readMaybe s
+getCount (_:flags) = getCount flags
+getCount [] =  Nothing
+
+moveTerm :: String -> Move
+moveTerm first =
+  let a = [read x::Int | x <- splitOn "," first]
+      b = (head a, head $ tail a)
+      c = (head $ tail $ tail a, last a)
+  in  (b,c)
 
 --Ask the user a question
 prompt :: String -> IO String
@@ -74,7 +158,17 @@ searchBoard board loc =
          Nothing -> Empty
 
 --This function prints any move passed to it with the text "Best Move: "
+
+{-
+aux :: Move -> [String]
+aux ((r1,c1),(r2,c2)) = "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++
+    ") to (" ++ show r2 ++ ", " ++ show c2 ++ ").\n" -- ++ aux move
+
 showBestMove :: Move -> IO () 
+
+showBestMove move = putStr $ "Best Move: " ++ (aux move)
+-}
+
 showBestMove move =
     let aux :: Move -> String
         aux ((r1,c1),(r2,c2)) = 
@@ -154,6 +248,7 @@ readLoc str =
          lst -> Nothing
 
 
+
 {-
 print format for showBoard:
 
@@ -186,3 +281,4 @@ file format of buildGame:
 *the first line represents who's turn it is
 *3 and 4 represent king pieces (3=king black; 4=king red)
 -}
+
