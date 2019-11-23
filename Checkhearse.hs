@@ -9,20 +9,18 @@ import Data.Ratio ((%))
 import Data.Maybe
 import Data.Char
 
-
 data Player = Black | Red deriving (Eq,Show)
 data Piece = Reg Player | King Player | Empty deriving (Eq,Show)
-
+data Outcome = Won Player | Tie deriving (Eq, Show)
 
 type Loc = (Int,Int) --(row,column)
 type Square = (Loc,Piece)
-type Board = [Square] --choose between these two types for board (only contains playable spaces)
-type Game = (Board,Player) --player = current turn
+type Board = [Square]
+type Game = (Board,Player,Int) --the player it the current turn, the int is the count
 type Move = (Loc,Loc) --((Start),(End),Turn)
---data Outcome = Player | Tie deriving (Eq, Show)
 
-buildGame :: Game --Initial State of the board
-buildGame = 
+buildGame :: Int -> Game --Initial State of the board, DO NOT USE A COUNT OVER 75
+buildGame count = 
     let bd = buildRow 1 2 (Reg Black) ++
              buildRow 2 1 (Reg Black) ++
              buildRow 3 2 (Reg Black) ++
@@ -35,81 +33,10 @@ buildGame =
         buildRow row column piece
             | column >= 9 = []
             | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
-    in (bd, Black)
-
+    in (bd, Black,count)
 
 validSpaces :: [Loc]
 validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
-
---call putStrLn in GHCI to test (putStrLn $ showBoard buildGame)
-showBoard :: Game -> String
-showBoard game = 
-    let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-        columnLabels ="\n       1     2     3     4     5     6     7     8\n"
-        top = columnLabels ++ seperator
-        showRows::Board -> Int -> String
-        showRows board row
-            | row >= 9 = []
-            | otherwise  = (showRow board row) ++ seperator ++ (showRows board (row + 1))
-        showTurn = 
-            case snd game of
-            Black -> "\n\x1b[30m  Player 1's turn (Black Pieces)\x1b[0m\n"
-            Red -> "\n\x1b[31m  Player 2's turn (Red Pieces)\x1b[0m\n" 
-    in top ++ (showRows (fst game) 1) ++ showTurn
-
-showRow :: Board -> Int -> String
-showRow board row = 
-    let noPlaySpace = "~~~~~|"
-        emptySpace =  "     |"
-        rowNumSpace = " " ++ show row ++ " |"
-        aux :: Int -> Int -> String
-        aux 4 column = []
-        aux smallRow 9 = '\n' : (aux (smallRow + 1) 0)
-        aux smallRow column =
-            (if ((row,column) `elem` validSpaces)
-            then if (smallRow == 2) 
-                 then showSpace board (row,column)
-                 else emptySpace
-            else case (smallRow,column) of
-                    (2,0) -> " " ++ rowNumSpace
-                    (_,0) -> "    |"
-                    _ -> noPlaySpace)
-            ++ aux smallRow (column + 1)
-    in aux 1 0
-
-showSpace :: Board -> Loc -> String
-showSpace (space:spaces) loc =
-    let clrRed = "\x1b[31m" --change text color to red
-        clrBlk = "\x1b[30m" --change text color to black
-        clrRst = "\x1b[0m"  --reset  text color to default
-        showPiece =
-            case snd space of
-                Reg Red    -> clrRed ++ "  r  " ++ clrRst ++ "|"
-                Reg Black  -> clrBlk ++ "  b  " ++ clrRst ++ "|"
-                King Red   -> clrRed ++ "  R  " ++ clrRst ++ "|"
-                King Black -> clrBlk ++ "  B  " ++ clrRst ++ "|"
-                Empty -> "     |"
-    in  if ((fst space) == loc)
-        then showPiece
-        else if ((length spaces) <= 0) 
-             then error "Space " ++ show loc ++ " not found"
-             else showSpace spaces loc
-
-
-{-
-      1     2     3
-   ~~~~~~~~~~~~~~~~~~~
-   |~~~~~|     |~~~~~|
- 1 |~~~~~|  R  |~~~~~|
-   |~~~~~|     |~~~~~|
-   ~~~~~~~~~~~~~~~~~~~
-   |     |~~~~~|     |
- 2 |     |~~~~~|  r  |
-   |     |~~~~~|     |
-   ~~~~~~~~~~~~~~~~~~~
--}
-
-
 
 updateBoard :: Game -> Move -> Maybe Game
 updateBoard game ((r1, c1), (r2, c2)) =
@@ -124,18 +51,8 @@ updateBoard game ((r1, c1), (r2, c2)) =
   -- if |y2 - y1| = 1, then scoot
   -- if |y2 - y1| > 1, then jump
 
-{-
 makeJump :: Game -> Move -> Maybe Game
-makeJump (bd, plyr) ((y1, x1), (y2, x2)) 
-  | victim == Nothing                    = Nothing --error tryna jump off board
-  | victim == Empty                           = Nothing --error can't jump empty space
-  | victim == King plyr || victim == Reg plyr = Nothing --error can't jump self
-  | otherwise                                 = doJump (y1, x1) (y2, x2) (xv, yv) bd plyr victim -- slap a Just there
-  where 
-  -}
-
-makeJump :: Game -> Move -> Maybe Game
-makeJump (bd, plyr) ((r1, c1), (r2, c2)) =
+makeJump (bd, plyr, count) ((r1, c1), (r2, c2)) =
     do let cv = if (c2-c1>0) -- to the right
              then c1+1
              else c1-1 -- to the left
@@ -145,12 +62,12 @@ makeJump (bd, plyr) ((r1, c1), (r2, c2)) =
        victim <- lookup (rv, cv) bd
        if (victim `elem` [Reg plyr, King plyr, Empty])
        then Nothing
-       else Just $ doJump (r1, c1) (r2, c2) ((rv,cv),victim) (bd,plyr)
+       else Just $ doJump (r1, c1) (r2, c2) ((rv,cv),victim) (bd,plyr,count)
 
 -- returns boolean that tells if it's a valid jump & square of the victim
 -- if false or a scoot, then returns ((0,0), Reg Red)
 checkForJump :: Game -> Move -> Bool--(Bool, Square)
-checkForJump (bd, plyr) ((r1,c1), (r2,c2)) =
+checkForJump (bd, plyr,count) ((r1,c1), (r2,c2)) =
    let cv = if (c2-c1>0) -- to the right
              then c1+1
              else c1-1 -- to the left
@@ -208,7 +125,7 @@ checkForJump (bd, plyr) ((r1,c1), (r2,c2)) =
 -}
 
 doJump :: Loc -> Loc -> Square -> Game -> Game
-doJump start end victim (bd,plyr) =
+doJump start end victim (bd,plyr,count) =
     let activePiece =
             case lookup start bd of
                 Just piece -> piece
@@ -216,7 +133,7 @@ doJump start end victim (bd,plyr) =
         remStart = setPiece bd (start, activePiece) Empty --Probably should remove this when we remove empties
         remVictim = setPiece remStart victim Empty
         nextTurn = otherPlayer plyr
-    in  (setPiece remVictim (end, Empty) activePiece, nextTurn)
+    in  (setPiece remVictim (end, Empty) activePiece, nextTurn, count-1)
 --  in checkMoreJumps plyr (x2,y2) (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
 -- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
@@ -225,123 +142,143 @@ otherPlayer Red = Black
 otherPlayer Black = Red
 
 makeScoot :: Game -> Move -> Maybe Game
-makeScoot (bd, plyr) (start, end) =
+makeScoot (bd, plyr,count) (start, end) =
   let activePiece = 
         case lookup start bd of
             Just piece -> piece
             _ -> error "(makeScoot) Invalid start piece"
       remStart = setPiece bd (start, activePiece) Empty
       nextTurn = otherPlayer plyr
-  in Just (setPiece remStart (end,Empty) activePiece, nextTurn)
-
+  in Just (setPiece remStart (end,Empty) activePiece, nextTurn, count-1)
 
 -- will change into 2 funcs when we get rid of empties
 -- create a remove/add functions
 setPiece :: Board -> Square -> Piece -> Board
 setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
 
-{-
--- validMove checks if start & end are on the board & if start is player's color
--- Tested and VERY CORRECT
+--validMove checks if start & end are on the board & if start is player's color
 validMove :: Game -> Move -> Bool
-validMove (bd, plyr) ((x1, y1), (x2, y2))
-     | (start == Nothing)                              = False -- start spot is playable spot on board
-     | (end == Nothing)                                = False -- end spot is playable spot on board
-     | (end /= Just Empty)                             = False -- make sure end spot is empty
-     | (not (valPlyr start plyr))                      = False -- piece at start is player's whose turn it is
-     | (not (rightDir (x1,y1) start (x2,y2) end plyr)) = False -- piece is moving right dir based on turn
-     | otherwise                                       = True  -- is a valid general move
-  where start = lookup (x1,y1) bd
-        end = lookup (x2,y2) bd
--}
-
-validMove :: Game -> Move -> Bool
-validMove (bd,plyr) (startLoc,endLoc) =
+validMove (bd,plyr,count) (startLoc,endLoc) =
     let startPc = lookup startLoc bd
         endPc = lookup endLoc bd
     in  case (startPc,endPc) of
-            (Just start,Just Empty) -> valPlyr start plyr && rightDir (startLoc,start) (endLoc,Empty) 
-                                       && checkForJump (bd, plyr) (startLoc, endLoc)--change "empty" to "nothing"
+            (Just start,Just Empty) -> count > 0 && valPlyr start plyr && rightDir (startLoc,start) (endLoc,Empty) 
+                                       && checkForJump (bd, plyr,count) (startLoc, endLoc)--change "empty" to "nothing"
             _ -> False
 
-{-
--- Tested and Works
-rightDir :: Loc -> Maybe Piece -> Loc ->  Maybe Piece -> Player -> Bool
-rightDir (y1,x1) (Just (King color)) (y2,x2) (Just Empty) plyr = True
-rightDir (y1,x1) (Just (Reg color)) (y2,x2) (Just Empty) plyr
-  | (color == Black && (y2-y1>0))= True
-  | (color == Red && (y2-y1<0))  = True
-  | otherwise                    = False
--}
-
---Makes sure you are moving in the right direction based on piece and its color
+--Make sure you are moving in the right direction based on piece and its color
 rightDir :: Square -> Square -> Bool
 rightDir ((y1,x1),King _) ((y2,x2),Empty) = True
 rightDir ((y1,x1),Reg color) ((y2,x2),Empty) = (color == Black && (y2-y1>0)) || (color == Red && (y2-y1<0))
-
-
---returns whether or not a piece is a player's piece
-{-
-valPlyr :: Maybe Piece -> Player -> Bool   --This should not take in a Maybe Piece!!
-valPlyr (Just (Reg color)) turn = (color == turn)
-valPlyr (Just (King color)) turn = (color == turn)
-valPlyr _ = False
--}
 
 valPlyr :: Piece -> Player -> Bool
 valPlyr (King plyr) turn = (plyr == turn)
 valPlyr (Reg  plyr) turn = (plyr == turn)
 
 -- will implement a counter that cuts game at certain point
-winner :: Board -> Maybe Player--Outcome
-winner board
-    | nobodyWins = Nothing--Just Tie
-    | redWins = Just Red
-    | blackWins = Just Black
+{-
+winner :: Game -> Maybe Outcome
+winner (board, p, count)
+    | tie = Just Tie
+    | redWins = Just $ Won Red
+    | blackWins = Just $ Won Black
     | otherwise = Nothing
-    where nobodyWins = all (\square -> (snd square) == Empty) board
+    where tie = 
           redWins = all (\square -> (snd square) == (Reg Red)  ||
                                   (snd square) == (King Red) ||
                                   (snd square) == (Empty)) board
           blackWins = all (\square -> (snd square) == (Reg Black)  ||
                                     (snd square) == (King Black) ||
                                     (snd square) == (Empty)) board
+-}
+winner :: Game -> Maybe Outcome
+winner (board,plyr,0) =
+    let redPieces = countPieces board Red
+        blackPieces = countPieces board Black
+        equalPieces = redPieces == blackPieces
+        moreRed = (redPieces > blackPieces)
+    in  if equalPieces
+        then Just Tie
+        else if moreRed
+             then Just $ Won Red
+             else Just $ Won Black 
+winner (board,plyr,count)
+    | redWins     = Just $ Won Red
+    | blackWins   = Just $ Won Black
+    | otherwise   = Nothing
+    where redWins =   all (\square -> (snd square) == (Reg Red)  ||
+                                      (snd square) == (King Red) ||
+                                      (snd square) == (Empty)) board
+          blackWins = all (\square -> (snd square) == (Reg Black)  ||
+                                      (snd square) == (King Black) ||
+                                      (snd square) == (Empty)) board
+
+countPieces :: Board -> Player -> Int
+countPieces bd plyr = sum [1| sq <- bd, (snd sq) == (Reg plyr) || (snd sq) == (King plyr)]
 
 validMoves :: Game -> [Move]
-validMoves (bd, plyer) =
+validMoves (bd, plyer, count) =
   let plSquare = [(loc, pc) | (loc, pc) <- bd, (pc==Reg plyer || pc ==King plyer)]
       mvsForSquare ((r, c), pc) = [((r,c), l) | l <- [(r+1, c+1), (r+1, c-1), (r-1, c-1), (r-1, c+1),
-                                                      (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
+                                   (r+2, c+2), (r+2, c-2), (r-2, c-2), (r-2, c+2)]]
       mvsForPlayer [] = []
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
-  in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer) mv]
+  in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer,count) mv]
+
+bestMove :: Game -> (Move, Outcome)
+bestMove game =
+  case winner game of
+    Just g -> (((-1,-1), (-1,-1)), g) -- need to figure out return here to indicate no-move
+    Nothing -> bestMoveRec game
+
+bestMoveRec :: Game -> (Move, Outcome)
+bestMoveRec (bd, plyr,count) =
+  let possMvsAndGames = movesAndGames (bd, plyr,count) -- [(Move, Game)]
+      possMvsAndOutcomes = [willWin mvAndGame | mvAndGame <- possMvsAndGames] -- [(Move, Outcome)]
+  in bestOutcomeForPlayer plyr possMvsAndOutcomes -- (Move, Outcome)
+
+movesAndGames :: Game -> [(Move, Game)]
+movesAndGames gm =
+  let mvs = validMoves gm
+      gmsForMvs = catMaybes [updateBoard gm mv | mv <- mvs]
+  in zip mvs gmsForMvs
+
+willWin :: (Move, Game) -> (Move, Outcome)
+willWin (move, (bd, plyr,count)) =
+  let res = case winner (bd, plyr,count) of
+              Just o -> [(move, o)]
+--              Nothing -> map (\mvAndGm -> ++(willWin mvAndGm)) (movesAndGames (bd, plyr))
+              Nothing -> foldr (\mAndGm x -> mAndGm ++ x) (map (\mvAndGm -> (willWin mvAndGm)) (movesAndGames (bd, plyr,count))) []
+  in bestOutcomeForPlayer plyr res
+
+bestOutcomeForPlayer :: Player -> [(Move, Outcome)] -> (Move, Outcome)
+bestOutcomeForPlayer plyr movesAndOuts =
+  let wins = [(mv, w) | (mv, w) <- movesAndOuts, w== (Won plyr)]
+      ties = [(mv, t) | (mv, t) <- movesAndOuts, t== (Tie)]
+      losses = [(mv, l) | (mv, l) <- movesAndOuts, l== (Won (otherPlayer plyr))]
+  in if wins /= []
+     then head wins
+     else if ties /= []
+     then head ties
+     else head losses
+
 
   {-
 bestMoves :: Game -> [Move]
 bestMoves (bd, plyer) = 
   let allMoves = validMoves (bd, plyer)
   -}
+
+{-
+-- gives list of possible gamestates
+allGames (bd, plyer) =
+  let allMoves = validMoves (bd, plyer)
+  in [updateBoard (bd, plyer) mv | mv <- allMoves]
+
 -- things to take into consideration:
 --   1) get pnts
 --   2) dont get killed:
 --      i) dont move to spot that gets you killed
 --      ii) mv a defending pc to help a pc about to get killed
 --   3) make a king pc
-
-readLoc :: String -> Maybe Loc
-readLoc str = 
-    let remSpace :: [Char] -> String
-        remSpace [] = []
-        remSpace (x:xs) = 
-            if x == ' '
-            then remSpace xs
-            else x : remSpace xs
-    in  case (splitOn "," (remSpace str)) of
-         (x:y:[]) ->
-            if (length x == 1 && length y == 1)
-            then if (isDigit (head x) && isDigit (head y))
-                 then Just ((read x :: Int),(read y :: Int))
-                 else Nothing
-            else Nothing
-         lst -> Nothing
-
+-}

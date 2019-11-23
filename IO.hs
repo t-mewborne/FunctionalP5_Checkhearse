@@ -1,4 +1,4 @@
-module Main where
+module IO where
 import Checkhearse
 import System.Directory
 import Data.Char
@@ -6,6 +6,7 @@ import System.Environment
 import System.Console.GetOpt
 import Text.Read
 import Data.List.Split
+
 
 {-
 INSTRUCTIONS FOR USAGE:
@@ -112,12 +113,14 @@ prompt message =
 
 --Load the game from the file
 loadGame :: [String] -> Game
-loadGame (turn:board) =
-    let plyr = if (turn == "1") then Black else Red 
+loadGame (count:turn:board) =
+    let k = read count
+        plyr = if (turn == "1") then Black else Red 
         aux :: [String] -> Loc -> Board
         aux _ (9,_) = []
         aux (row:rows) (r,c) = (loadRow row (r,c)) ++ (aux rows (r+1,c))
-    in (aux board (1,1), plyr)
+    in (aux board (1,1), plyr,k)
+loadGame lst = error "(loadGame) error loading game"
     
 --Load an individual row from the file
 loadRow :: String -> Loc -> Board
@@ -132,8 +135,9 @@ loadRow (space:spaces) (r,c) =
 
 --Write a game to a file
 writeGame :: Game-> String -> IO ()
-writeGame (board,turn) fileName = 
+writeGame (board,turn,count) fileName = 
     let plyr = if (turn == Black) then "1\n" else "2\n"
+        k = (show count) ++ "\n"
         aux :: Board -> Loc -> String
         aux _ (r,9) = '\n':(aux board (r+1,1))
         aux _ (9,_) = []
@@ -144,7 +148,7 @@ writeGame (board,turn) fileName =
                 Reg Red    -> '2'
                 King Black -> '3'
                 King Red   -> '4'):(aux board (r,c+1))
-    in writeFile fileName (plyr ++ (aux board (1,1)))
+    in writeFile fileName (k ++ plyr ++ (aux board (1,1)))
 
 --Search the board to determine if there is a piece at the given location
 searchBoard :: Board -> Loc -> Piece
@@ -161,13 +165,108 @@ aux ((r1,c1),(r2,c2)) = "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++
     ") to (" ++ show r2 ++ ", " ++ show c2 ++ ").\n" -- ++ aux move
 
 showBestMove :: Move -> IO () 
+
 showBestMove move = putStr $ "Best Move: " ++ (aux move)
 -}
 
+showBestMove move =
+    let aux :: Move -> String
+        aux ((r1,c1),(r2,c2)) = 
+            "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++") to (" ++ 
+            show r2 ++ ", " ++ show c2 ++ ").\n"
+    in putStr $ "Best Move: " ++ (aux move)
+            
+showBoard :: Game -> String
+showBoard (bd,plyr,count) = 
+    let seperator =   "    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+        columnLabels ="\n       1     2     3     4     5     6     7     8\n"
+        top = columnLabels ++ seperator
+        k = "  Turns remaining: " ++ show count ++ "\n"
+        showRows::Board -> Int -> String
+        showRows board row 
+            | row >= 9 = []
+            | otherwise  = (showRow board row) ++ seperator ++ (showRows board (row + 1)) 
+        showTurn = 
+            case plyr of
+            Black -> "\n\x1b[30m  Player 1's turn (Black Pieces)\x1b[0m\n"
+            Red -> "\n\x1b[31m  Player 2's turn (Red Pieces)\x1b[0m\n" 
+    in top ++ (showRows bd 1) ++ showTurn ++ k
+
+showRow :: Board -> Int -> String
+showRow board row =
+    let noPlaySpace = "~~~~~|"
+        emptySpace =  "     |"
+        rowNumSpace = " " ++ show row ++ " |"
+        aux :: Int -> Int -> String
+        aux 4 column = []
+        aux smallRow 9 = '\n' : (aux (smallRow + 1) 0)
+        aux smallRow column =
+            (if ((row,column) `elem` validSpaces)
+            then if (smallRow == 2)
+                 then showSpace board (row,column)
+                 else emptySpace
+            else case (smallRow,column) of
+                    (2,0) -> " " ++ rowNumSpace
+                    (_,0) -> "    |"
+                    _ -> noPlaySpace)
+            ++ aux smallRow (column + 1)
+    in aux 1 0
+
+showSpace :: Board -> Loc -> String
+showSpace (space:spaces) loc =
+    let clrRed = "\x1b[31m" --change text color to red
+        clrBlk = "\x1b[30m" --change text color to black
+        clrRst = "\x1b[0m"  --reset  text color to default
+        showPiece =
+            case snd space of
+                Reg Red    -> clrRed ++ "  r  " ++ clrRst ++ "|"
+                Reg Black  -> clrBlk ++ "  b  " ++ clrRst ++ "|"
+                King Red   -> clrRed ++ "  R  " ++ clrRst ++ "|"
+                King Black -> clrBlk ++ "  B  " ++ clrRst ++ "|"
+                Empty -> "     |"
+    in  if ((fst space) == loc)
+        then showPiece
+        else if ((length spaces) <= 0)
+             then error "Space " ++ show loc ++ " not found"
+             else showSpace spaces loc
+
+readLoc :: String -> Maybe Loc 
+readLoc str = 
+    let remSpace :: [Char] -> String
+        remSpace [] = []
+        remSpace (x:xs) = 
+            if x == ' ' 
+            then remSpace xs
+            else x : remSpace xs
+    in  case (splitOn "," (remSpace str)) of
+         (x:y:[]) ->
+            if (length x == 1 && length y == 1)
+            then if (isDigit (head x) && isDigit (head y)) 
+                 then Just ((read x :: Int),(read y :: Int))
+                 else Nothing
+            else Nothing
+         lst -> Nothing
+
+
+
+{-
+print format for showBoard:
+
+      1     2     3
+   ~~~~~~~~~~~~~~~~~~~
+   |~~~~~|     |~~~~~|
+ 1 |~~~~~|  R  |~~~~~|
+   |~~~~~|     |~~~~~|
+   ~~~~~~~~~~~~~~~~~~~
+   |     |~~~~~|     |
+ 2 |     |~~~~~|  r  |
+   |     |~~~~~|     |
+   ~~~~~~~~~~~~~~~~~~~
+-}
 
 {-
 file format of buildGame:
-
+75         |  COUNTER
 1          |  PLAYER TURN
 01010101   |  ROW 1 (Black Pieces)
 10101010   |
