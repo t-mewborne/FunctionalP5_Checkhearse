@@ -5,7 +5,7 @@ import Data.Char
 import System.Environment
 import System.Console.GetOpt
 import Text.Read
-import Data.List
+import Data.List.Split
 
 {-
 INSTRUCTIONS FOR USAGE:
@@ -48,7 +48,7 @@ main = do
     putStrLn $ show (flags, inputs, errors)
     if Help `elem` flags || not (null errors) || length inputs > 1
     then do mapM putStr errors
-            putStrLn $ usageInfo "Usage: fortunes [options] [file]" options
+            putStrLn $ usageInfo "Usage: ./checkhearse file [options]" options
     else do let fileName = head inputs
             {-exists <- doesFileExist fileName
             -let game = 
@@ -61,26 +61,45 @@ main = do
             board <- readFile fileName
             let rows = lines board
                 game = loadGame rows
-                move = (moveTerm (head $ tail inputs))
-            if Move `elem` flags
-            then putStrLn $ showBoard $ updateBoard game move
+                moveShort = (moveTerm (head $ tail inputs))
+                
+            --if Winner `elem` flags
+            --then putStrLn $ "You are fun."
+            if Current `elem` flags
+            then putStrLn $ showBoard game
+            else do let moveBoard = updateBoard game moveShort
+                    case moveBoard of
+                        Just game -> putStrLn $ showBoard $ game
+                        _ -> putStrLn $ "Invalid game"
+                 
+            --if Move `elem` flags
+            --then putStrLn $ showBoard $ updateBoard game move
             -- ./checkhearse game.txt 1,2 3,4 -> convert string to ints -> convert ints to tuple ->
             -- convert tuple to move
             -- splitAt "," 1 2 -> read "1" = 1 -> 1 = a, 2 = b (a, b)
             --else putStrLn $ "Hi"
             --if Winner `elem` flags
             --then showBestMove ((1,2),(2,1))
-            else putStrLn $ showBoard game
+            --else 
 
 -- ./checkhearse game.txt 1,2 3,4 -> "1,2" -> "1" "2" -> 1 2
 -- ./checkhearse game.txt 1,2,3,4
 
 
-getMove :: [Flag] -> IO String
+getMove :: [Flag] -> String
+getMove (Move s:_) = s :: String
+getMove (_:flags) = getMove flags
+getName [] = error "Please enter a move."
+
+
+getCount :: [Flag] -> Maybe Int
+getCount (Count s:_) = readMaybe s
+getCount (_:flags) = getCount flags
+getCount [] =  Nothing
 
 moveTerm :: String -> Move
 moveTerm first =
-  let a = [read x | x <- splitOn "," first]
+  let a = [read x::Int | x <- splitOn "," first]
       b = (head a, head $ tail a)
       c = (head $ tail $ tail a, last a)
   in  (b,c)
