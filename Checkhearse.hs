@@ -8,6 +8,7 @@ import Data.Ratio (numerator, denominator)
 import Data.Ratio ((%))
 import Data.Maybe
 import Data.Char
+import Debug.Trace
 
 data Player = Black | Red deriving (Eq,Show)
 data Piece = Reg Player | King Player | Empty deriving (Eq,Show)
@@ -224,7 +225,7 @@ validMoves (bd, plyer, count) =
       mvsForPlayer [] = []
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer,count) mv]
-
+{-
 bestMove :: Game -> (Move, Outcome)
 bestMove game =
   case winner game of
@@ -261,6 +262,46 @@ bestOutcomeForPlayer plyr movesAndOuts =
      else if ties /= []
      then head ties
      else head losses
+-}
+bestMove :: Game -> (Move, Outcome)
+bestMove game =
+  case winner game of
+    Just g -> (((-1,-1), (-1,-1)), g) -- need to figure out return here to indicate no-move
+    Nothing -> bestMoveRec game
+
+bestMoveRec :: Game -> (Move, Outcome)
+bestMoveRec (bd, plyr,count) =
+  let possMvsAndGames = movesAndGames (bd, plyr,count) -- [(Move, Game)]
+      possMvsAndOutcomes = [willWin (mv, (mv, gm)) | (mv, gm) <- possMvsAndGames] -- [(Move, Outcome)]
+      (initialMv, (winningMv, out)) = bestOutcomeForPlayer plyr possMvsAndOutcomes
+  in (initialMv, out) -- (Move, Outcome)
+
+movesAndGames :: Game -> [(Move, Game)]
+movesAndGames gm =
+  let mvs = validMoves gm
+      gmsForMvs = catMaybes [updateBoard gm mv | mv <- mvs]
+  in zip mvs gmsForMvs
+
+willWin :: (Move,(Move, Game)) -> (Move, (Move, Outcome))
+willWin (initMv, (recMv, (bd, plyr,count))) =
+  let res = case winner (bd, plyr,count) of
+              Just o -> [(initMv, (recMv, o))]
+--              Nothing -> map (\mvAndGm -> ++(willWin mvAndGm)) (movesAndGames (bd, plyr))
+              Nothing -> foldr (\mAndO x -> mAndO ++ x) (map (\mvAndGm -> (willWin (initMv, mvAndGm))) (movesAndGames (bd, plyr,count))) []
+  in bestOutcomeForPlayer plyr res
+
+bestOutcomeForPlayer :: Player -> [(Move, (Move, Outcome))] -> (Move, (Move, Outcome))
+bestOutcomeForPlayer plyr movesAndOuts =
+  let wins = [(i, (mv, w)) | (i, (mv, w)) <- movesAndOuts, w== (Won plyr)]
+      ties = [(i, (mv, t)) | (i, (mv, t)) <- movesAndOuts, t== (Tie)]
+      losses = [(i, (mv, l)) | (i, (mv, l)) <- movesAndOuts, l== (Won (otherPlayer plyr))]
+  in if wins /= []
+     then head wins
+     else if ties /= []
+     then head ties
+     else head losses
+
+
 
 
   {-
