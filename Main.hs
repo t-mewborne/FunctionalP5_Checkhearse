@@ -70,10 +70,15 @@ main = do
             then showBestMove $ fst $ bestMove game
             else if Current `elem` flags
             then putStrLn $ showBoard game
-            else do let moveBoard = updateBoard game moveShort
+            else if getFlag flags == True
+            then do let moveBoard = updateBoard game moveShort       
                     case moveBoard of
                         Just game -> putStrLn $ showBoard $ game
                         _ -> putStrLn $ "Invalid game"
+            else       case getCount flags of
+                        Just number -> putStrLn $ "hi"
+                        _ -> putStrLn $ "Enter a valid number."
+
 
 -- count needs to be less than 5
                  
@@ -90,6 +95,11 @@ main = do
 -- ./checkhearse game.txt 1,2 3,4 -> "1,2" -> "1" "2" -> 1 2
 -- ./checkhearse game.txt 1,2,3,4
 
+printNum num = num+1
+
+getFlag :: [Flag] -> Bool
+getFlag (Move s:_) = True
+getFlag _ = False
 
 getMove :: [Flag] -> String
 getMove (Move s:_) = s :: String
