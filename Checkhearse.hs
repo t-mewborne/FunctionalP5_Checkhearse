@@ -225,44 +225,7 @@ validMoves (bd, plyer, count) =
       mvsForPlayer [] = []
       mvsForPlayer (x:xs) = mvsForSquare x++ mvsForPlayer xs
   in [mv | mv <- mvsForPlayer plSquare, validMove (bd, plyer,count) mv]
-{-
-bestMove :: Game -> (Move, Outcome)
-bestMove game =
-  case winner game of
-    Just g -> (((-1,-1), (-1,-1)), g) -- need to figure out return here to indicate no-move
-    Nothing -> bestMoveRec game
 
-bestMoveRec :: Game -> (Move, Outcome)
-bestMoveRec (bd, plyr,count) =
-  let possMvsAndGames = movesAndGames (bd, plyr,count) -- [(Move, Game)]
-      possMvsAndOutcomes = [willWin mvAndGame | mvAndGame <- possMvsAndGames] -- [(Move, Outcome)]
-  in bestOutcomeForPlayer plyr possMvsAndOutcomes -- (Move, Outcome)
-
-movesAndGames :: Game -> [(Move, Game)]
-movesAndGames gm =
-  let mvs = validMoves gm
-      gmsForMvs = catMaybes [updateBoard gm mv | mv <- mvs]
-  in zip mvs gmsForMvs
-
-willWin :: (Move, Game) -> (Move, Outcome)
-willWin (move, (bd, plyr,count)) =
-  let res = case winner (bd, plyr,count) of
-              Just o -> [(move, o)]
---              Nothing -> map (\mvAndGm -> ++(willWin mvAndGm)) (movesAndGames (bd, plyr))
-              Nothing -> foldr (\mAndGm x -> mAndGm ++ x) (map (\mvAndGm -> (willWin mvAndGm)) (movesAndGames (bd, plyr,count))) []
-  in bestOutcomeForPlayer plyr res
-
-bestOutcomeForPlayer :: Player -> [(Move, Outcome)] -> (Move, Outcome)
-bestOutcomeForPlayer plyr movesAndOuts =
-  let wins = [(mv, w) | (mv, w) <- movesAndOuts, w== (Won plyr)]
-      ties = [(mv, t) | (mv, t) <- movesAndOuts, t== (Tie)]
-      losses = [(mv, l) | (mv, l) <- movesAndOuts, l== (Won (otherPlayer plyr))]
-  in if wins /= []
-     then head wins
-     else if ties /= []
-     then head ties
-     else head losses
--}
 bestMove :: Game -> (Move, Outcome)
 bestMove game =
   case winner game of
@@ -301,25 +264,38 @@ bestOutcomeForPlayer plyr movesAndOuts =
      then head ties
      else head losses
 
+--Gives the rank of a board. If rank > 0, black is winning. Otherwise, red is winning. If it is
+--equal to 0, it's tied.
+--If rank returns 100, black wins. If rank returns -100, red wins.
+rank :: Game -> Int
+rank (bd,plyr,c) = 
+    let redCt = sum [1| sq <- bd, (snd sq) == (Reg Red)] + sum [2| sq <- bd, (snd sq) == (King Red)]
+        blkCt = sum [1| sq <- bd, (snd sq) == (Reg Black)] + sum [2| sq <- bd, (snd sq) == (King Black)]
+    in case winner (bd,plyr,c) of
+            Just (Won Black) -> 100
+            Just (Won Red)   -> -100
+            _ -> (blkCt - redCt)
 
+depthSearch :: Game -> Int -> (Move,Int)
+depthSearch (bd,plyr,ct) cut = 
+    let possMvsAndGames = movesAndGames (bd,plyr,ct)
+        possMvsAndRanks = [bestBoard (mv, (mv, gm)) cut | (mv, gm) <- possMvsAndGames]
+        (i, (_,r)) = bestRankForPlayer plyr possMvsAndRanks
+    in  if (cut >= ct)
+        then error $ "(depthSearch) Cut (" ++ (show cut) ++ ") cannot be greater than turns remaining (" ++ (show ct) ++ ")."
+        else (i,r)
 
+bestRankForPlayer :: Player -> [(Move,(Move,Int))] -> (Move,(Move,Int))
+bestRankForPlayer plyr movesNRks =
+    let ranks = [r|(i,(m,r)) <- movesNRks]
+        bestRank = case plyr of
+                       Red -> minimum ranks
+                       Black -> maximum ranks
+    in head [(i,(m,r)) | (i,(m,r)) <- movesNRks, r == bestRank]
 
-  {-
-bestMoves :: Game -> [Move]
-bestMoves (bd, plyer) = 
-  let allMoves = validMoves (bd, plyer)
-  -}
-
-{-
--- gives list of possible gamestates
-allGames (bd, plyer) =
-  let allMoves = validMoves (bd, plyer)
-  in [updateBoard (bd, plyer) mv | mv <- allMoves]
-
--- things to take into consideration:
---   1) get pnts
---   2) dont get killed:
---      i) dont move to spot that gets you killed
---      ii) mv a defending pc to help a pc about to get killed
---   3) make a king pc
--}
+bestBoard :: (Move,(Move, Game)) -> Int -> (Move, (Move, Int))
+bestBoard (i, (m, (bd, plyr,count))) cut =
+    let res = case cut of 
+                   0 -> [(i,(m,rank (bd, plyr,count)))]
+                   other -> foldr (\mAndR x -> mAndR ++ x) (map (\mvAndGm -> (bestBoard (i, mvAndGm) (cut-1))) (movesAndGames (bd,plyr,count))) []
+    in  bestRankForPlayer plyr res
