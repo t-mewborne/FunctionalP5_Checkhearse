@@ -49,7 +49,7 @@ main = do
     putStrLn $ show (flags, inputs, errors)
     if Help `elem` flags || not (null errors) || length inputs == 0 || length inputs > 1 
     then do mapM putStr errors
-            putStrLn $ usageInfo "Usage: ./checkhearse file [options]" options
+            putStrLn $ usageInfo "Usage: ./checkhearse file option [more_options]" options
     else do let fileName = head inputs
             {-exists <- doesFileExist fileName
             -let game = 
