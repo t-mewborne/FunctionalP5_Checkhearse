@@ -179,6 +179,10 @@ showBestMove move =
             "Move the piece at (" ++ show r1 ++ ", " ++ show c1 ++") to (" ++ 
             show r2 ++ ", " ++ show c2 ++ ").\n"
     in putStr $ "Best Move: " ++ (aux move) 
+
+-- used in showBoard
+validSpaces :: [Loc]
+validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
     
 showBoard :: Game -> String
 showBoard (bd,plyr,count) = 
