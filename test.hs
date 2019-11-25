@@ -58,6 +58,7 @@ False
 boardFromGame :: Game -> Board
 boardFromGame (x,y) = x
 
+{-
 boardBlack :: Board -> IO ()
 boardBlack board = putStrLn $ showBoard (board, Black)
 
@@ -66,7 +67,7 @@ moveBoard mov = putStrLn $ showBoard (updateBoard startBlack mov)
 
 gameBoard :: Game -> IO ()
 gameBoard game = putStrLn $ showBoard game
-
+-}
 -- putStrLn $ showBoard buildGame
 -- Start Position, Black Turn
 startBlack :: Game
