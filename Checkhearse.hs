@@ -18,7 +18,7 @@ type Loc = (Int,Int) --(row,column)
 type Square = (Loc,Piece)
 type Board = [Square]
 type Game = (Board,Player,Int) --the player it the current turn, the int is the count
-type Move = (Loc,Loc) --((Start),(End),Turn)
+type Move = (Loc,Loc) --(Start,Destination)
 
 buildGame :: Int -> Game --Initial State of the board, DO NOT USE A COUNT OVER 75
 buildGame count = 
@@ -36,21 +36,64 @@ buildGame count =
             | otherwise = ((row,column),piece):(buildRow row (column + 2) piece)
     in (bd, Black,count)
 
-validSpaces :: [Loc]
-validSpaces = [(x,y) | x <- [1..8], y <- [1..8], (even x && odd y) || (odd x && even y)]
-
+-- take in current game and move, return Maybe Game
+-- calculates if jump or scoot, then makes that move if valid
 updateBoard :: Game -> Move -> Maybe Game
 updateBoard game ((r1, c1), (r2, c2)) =
-  if not (validMove game ((r1, c1), (r2, c2))) then Nothing --- SAME GAME, BC INVALID MOVE
+  if not (validMove game ((r1, c1), (r2, c2))) then Nothing
   else if abs (r2-r1)==1
     then makeScoot game ((r1, c1), (r2, c2))  
   else makeJump game ((r1, c1), (r2, c2))  
 
+--validMove checks: if start & dest. are on the board,
+--                     count > 0,
+--                     start is player's color,
+--                     piece is moving correct direction
+--                     & jumping other player (if jump)
 
-  -- first check validMove
-  -- determine if move is jump or scoot & do validJump or validScoot
-  -- if |y2 - y1| = 1, then scoot
-  -- if |y2 - y1| > 1, then jump
+validMove :: Game -> Move -> Bool
+validMove (bd,plyr,count) (startLoc,endLoc) =
+    let startPc = lookup startLoc bd
+        endPc = lookup endLoc bd
+    in  case (startPc,endPc) of
+            (Just start,Just Empty) -> count > 0 && valPlyr start plyr 
+                                                 && rightDir (startLoc,start) (endLoc,Empty) 
+                                                 && checkForVictim (bd, plyr,count) (startLoc, endLoc)
+            _ -> False
+
+findVictim :: Move -> Square
+findVictim ((r1, c1), (r2, c2)) =
+  -- find victim
+
+-- if move is scoot, then returns true, because there's no victim to check
+-- if move is jump, checks identify of victim (other player) & return true if correct
+-- return false if jump over self or empty square
+checkForVictim :: Game -> Move -> Bool
+checkForVictim (bd, plyr,count) ((r1,c1), (r2,c2)) =
+   let cv = if (c2-c1>0) -- victim col
+             then c1+1
+             else c1-1
+       rv = if (r2-r1>0) -- victim row
+             then r1+1
+             else r1-1
+       victim = 
+            case lookup (rv, cv) bd of
+                    Nothing -> Empty
+                    Just v -> v
+   in if abs (r2-r1)==1 then True -- if it's a scoot, it returns true
+      else if (victim `elem` [Reg plyr, King plyr, Empty]) -- if jumping over own piece or empty square, then false
+      then False
+      else True 
+
+
+jumpedPiece (r1,c1) (r2,c2) 
+
+	where inBetween n1 n2 
+			| n2-n1 > 0 = 
+
+assertTrue :: Bool -> Maybe ()
+assertTrue True = Just ()
+assertTrue False = Nothing
 
 makeJump :: Game -> Move -> Maybe Game
 makeJump (bd, plyr, count) ((r1, c1), (r2, c2)) =
@@ -61,69 +104,13 @@ makeJump (bd, plyr, count) ((r1, c1), (r2, c2)) =
              then r1+1
              else r1-1 -- to the top
        victim <- lookup (rv, cv) bd
-       if (victim `elem` [Reg plyr, King plyr, Empty])
-       then Nothing
-       else Just $ doJump (r1, c1) (r2, c2) ((rv,cv),victim) (bd,plyr,count)
+       activePiece <- lookup (r1, c1) bd
+       assertTrue (victim `elem` [Reg plyr, King plyr, Empty])
+       refreshBoard = changeBoard _________
+       --setPiece (setPiece remStart (end,Empty) activePiece, nextTurn, count-1)
+       (newBoard, (otherPlayer plyr), count-1)
+--       Just $ doJump (r1, c1) (r2, c2) ((rv,cv),victim) (bd,plyr,count)
 
--- returns boolean that tells if it's a valid jump & square of the victim
--- if false or a scoot, then returns ((0,0), Reg Red)
-checkForJump :: Game -> Move -> Bool--(Bool, Square)
-checkForJump (bd, plyr,count) ((r1,c1), (r2,c2)) =
-   let cv = if (c2-c1>0) -- to the right
-             then c1+1
-             else c1-1 -- to the left
-       rv = if (r2-r1>0) -- to the bottom
-             then r1+1
-             else r1-1
-       victim = 
-            case lookup (rv, cv) bd of
-                    Nothing -> Empty
-                    Just v -> v
-   in if abs (r2-r1)==1 -- if it's a scoot, it returns true
-      then True --(True, ((0,0), Reg Red))
-      else if (victim `elem` [Reg plyr, King plyr, Empty]) -- if jumping over own piece, then false
-      then False --(False, ((0,0), Reg Red))
-      else True --(True, ((rv, cv), victim))
-
-
-{- need function to do multiple jumps
- do we make it so that the user types each space they want to hit?
- or do they just type end placement & computer chooses which one?
- or does computer prompt user if theres another jump available?
--}
-
-
---This function will be called by doJump, if there's another jump available,
---it will call doJump & if there's not another jump, it'll return the game from doJump
-{-checkMoreJumps :: Player -> Loc -> Board -> Game
-  checkMoreJumps plyr loc board =
-  let lftLoc = (,)
-     rgtLoc = (,)
-     rgtPiece = fndPiece rgtLoc board
-     lftPiece = fndPiece lftLoc board
-     (lftJumpResult, p) = makeJump (board, plyr) (loc, lftLoc)
-     (rgtJumpResult, p) = makeJump (board, plyr) (loc, rgtLoc)
-  in if (lftJumpResult /= board)
-    then (lftJumpResult, --will figure out player part)
-     else if (rgtJumpResult /= board)
-     then (rgtJumpResult, --will figure out player part)
-     else (board, --player)
--}
-      
-{-fndPiece loc board = 
-  let maybePiece = pAtLoc loc board
-  in if maybePiece == Nothing
-     then Nothing
-     else fromJust (maybePiece)
--}
-{-      Just activePiece = pAtLoc(x1, y2) bd
-        bdWoutStart = setPiece bd ((x1, y1), activePiece) Empty
-        bdWoutVictim = setPiece bdWoutStart ((xv, yv), victim) Empty
-        nextTurn = if plyr == Red
-                   then Black
-                   else Red
-        ret = (setPiece bWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
--}
 
 doJump :: Loc -> Loc -> Square -> Game -> Game
 doJump start end victim (bd,plyr,count) =
@@ -131,12 +118,10 @@ doJump start end victim (bd,plyr,count) =
             case lookup start bd of
                 Just piece -> piece
                 _ -> error "(doJump) Invalid start piece"
-        remStart = setPiece bd (start, activePiece) Empty --Probably should remove this when we remove empties
+        remStart = setPiece bd (start, activePiece) Empty
         remVictim = setPiece remStart victim Empty
         nextTurn = otherPlayer plyr
     in  (setPiece remVictim (end, Empty) activePiece, nextTurn, count-1)
---  in checkMoreJumps plyr (x2,y2) (setPiece bdWoutVictim ((x2, y2), Empty) activePiece, nextTurn)
--- ^^ this passes player, the location, and the board with the jump made & will check for more jumps
 
 otherPlayer :: Player -> Player
 otherPlayer Red = Black
@@ -157,15 +142,13 @@ makeScoot (bd, plyr,count) (start, end) =
 setPiece :: Board -> Square -> Piece -> Board
 setPiece bd (loc,oldPiece) replacement = [ if x==loc then (loc,replacement) else (x,y) | (x,y) <- bd]
 
---validMove checks if start & end are on the board & if start is player's color
-validMove :: Game -> Move -> Bool
-validMove (bd,plyr,count) (startLoc,endLoc) =
-    let startPc = lookup startLoc bd
-        endPc = lookup endLoc bd
-    in  case (startPc,endPc) of
-            (Just start,Just Empty) -> count > 0 && valPlyr start plyr && rightDir (startLoc,start) (endLoc,Empty) 
-                                       && checkForJump (bd, plyr,count) (startLoc, endLoc)--change "empty" to "nothing"
-            _ -> False
+remPiece :: Board -> Loc -> Maybe Board
+setPiece bd loc replacement 
+	| lookup loc bd == Nothing = Nothing 
+	| otherwise                = [ if x==loc then (loc,Empty) else (x,y) | (x,y) <- bd]
+
+
+addPiece :: Board -> Piece -> Maybe Board
 
 --Make sure you are moving in the right direction based on piece and its color
 rightDir :: Square -> Square -> Bool
