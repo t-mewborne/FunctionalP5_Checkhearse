@@ -47,10 +47,10 @@ main = do
     args <- getArgs
     let (flags, inputs, errors) = getOpt Permute options args
     putStrLn $ show (flags, inputs, errors)
-    if Help `elem` flags || not (null errors) || length inputs == 0 || length inputs > 1 
+    if Help `elem` flags || not (null errors) || length inputs > 1  
     then do mapM putStr errors
             putStrLn $ usageInfo "Usage: ./checkhearse file option [more_options]" options
-    else do let fileName = head inputs
+    else do let fileName = if null inputs then "game.txt" else head inputs
             {-exists <- doesFileExist fileName
             -let game = 
             -  if (exists)
@@ -66,20 +66,23 @@ main = do
                 
             --if Winner `elem` flags
             --then putStrLn $ "You are fun."
-            if Winner `elem` flags
-            then showBestMove $ fst $ bestMove game
+            if Winner `elem` flags || length flags == 0
+            then showBestMove $ fst $ bestMove $ copyGame game 5
             else if Current `elem` flags
             then putStrLn $ showBoard game
+            else if Verb `elem` flags
+            then checkRank (rank game)
+             
             else if getFlag flags == True
             then do let moveBoard = updateBoard game moveShort       
                     case moveBoard of
                         Just game -> putStrLn $ showBoard $ game
                         _ -> putStrLn $ "Invalid game"
             else       case getCount flags of
-                        Just number -> putStrLn $ "hi"
+                        Just number -> showBestMove $ fst $ bestMove $ copyGame game number
                         _ -> putStrLn $ "Enter a valid number."
 
-
+-- 0 = Tie, 1-99 = [Int] (Black is winning), 100 = Black Wins
 -- count needs to be less than 5
                  
             --if Move `elem` flags
@@ -94,8 +97,17 @@ main = do
 
 -- ./checkhearse game.txt 1,2 3,4 -> "1,2" -> "1" "2" -> 1 2
 -- ./checkhearse game.txt 1,2,3,4
+checkRank :: Int -> IO ()
+checkRank rank 
+    | rank == 0                 = putStrLn $ "Tie"
+    | rank `elem` [1..99]       = putStrLn $ show rank ++ " (Black is winning)"
+    | rank == 100               = putStrLn $ "Black Wins"
+    | rank `elem` [(-99)..(-1)] = putStrLn $ show rank ++ " (Red is winning)"
+    | rank == -100              = putStrLn $ "Red Wins"
+    | otherwise                 = putStrLn $ "Rank is not valid, ya fool. Do better next time."
 
-printNum num = num+1
+copyGame :: Game -> Int -> Game
+copyGame (bd, plyr, count) num = (bd, plyr, num)
 
 getFlag :: [Flag] -> Bool
 getFlag (Move s:_) = True
